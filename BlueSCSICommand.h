@@ -4,13 +4,6 @@
 #define BLUE_SCSI_COMMAND_H
 
 
-// Defines
-
-#define BLUE_SCSI_CAP_LARGE_TRANSFERS 0x1
-#define BLUE_SCSI_CAP_LARGE_SEND 0x2
-#define BLUE_SCSI_CAP_SET_WORKING_DIR 0x4
-
-
 // Interface
 
 struct BlueSCSICapResult {
@@ -19,6 +12,9 @@ struct BlueSCSICapResult {
 	uint8 reserved[6];
 };
 
+struct BlueSCSIDebugResult {
+	uint8 flag;
+};
 
 class BlueSCSICommand : public SCSICommand {
 	public:
@@ -30,6 +26,15 @@ class BlueSCSICommand : public SCSICommand {
 		bool IsBlueSCSIModeSense(uint8 * data, uint8 dataLen);
 		
 		bool GetCapabilities(BlueSCSICapResult * result);
+		bool SupportsLargeTransfers(const BlueSCSICapResult * result);
+		bool SupportsLargeSend(const BlueSCSICapResult * result);
+		bool SupportsSetWorkingDir(const BlueSCSICapResult * result);
+		
+		bool GetDebug(BlueSCSIDebugResult *result);
+		bool SetDebug(bool enabled);
+		
+		bool GetWorkingDir(char * path, uint8 maxPathLen);
+		bool SetWorkingDir(char * path, uint8 maxPathLen);
 		
 	private:
 		bool ToolboxMetadata(uint8 subcommand, uint8 * data, uint8 dataLen);

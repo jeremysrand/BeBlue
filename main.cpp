@@ -62,8 +62,51 @@ static void inquiry(const char * dev)
 	}
 	
 	printf("  Capabilities:\n");
-	printf("    Version: %u\n", capResult.version);
-	printf("    Flags:   %u\n", capResult.flags);
+	printf("    Version:         %u\n", capResult.version);
+	printf("    Flags:           %u\n", capResult.flags);
+	printf("    Large Transfers: %s\n", comm.SupportsLargeTransfers(&capResult) ? "Supported" : "Unsupported");
+	printf("    Large Send:      %s\n", comm.SupportsLargeSend(&capResult) ? "Supported" : "Unsupported");
+	printf("    Set Working Dir: %s\n", comm.SupportsSetWorkingDir(&capResult) ? "Supported" : "Unsupported");
+
+#if 0
+	if (!comm.SetDebug(false)) {
+		close(fd);
+		if (comm.HasError())
+			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+		return;
+	}
+#endif
+	
+	BlueSCSIDebugResult debug;
+	if (!comm.GetDebug(&debug)) {
+		close(fd);
+		if (comm.HasError())
+			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+		return;
+	}
+	printf("  Debug: %s\n", (debug.flag ? "Enabled" : "Disabled"));
+	
+	if (comm.SupportsSetWorkingDir(&capResult)) {
+		char workingDir[64];
+#if 0
+		strcpy(workingDir, "/");
+		if (!comm.SetWorkingDir(workingDir, sizeof(workingDir))) {
+			close(fd);
+			if (comm.HasError())
+				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+			return;
+		}
+		
+#endif
+		if (!comm.GetWorkingDir(workingDir, sizeof(workingDir))) {
+			close(fd);
+			if (comm.HasError())
+				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+			return;
+		}
+	
+		printf("  Working Dir: %s\n", workingDir);
+	}
 	
 	close(fd);
 }

@@ -9,6 +9,12 @@
 #define BLUE_SCSI_TOOLBOX_VERSION 0x00
 
 #define BLUE_SCSI_GET_CAPABILITIES 0x01
+#define BLUE_SCSI_CAP_LARGE_TRANSFERS 0x1
+#define BLUE_SCSI_CAP_LARGE_SEND 0x2
+#define BLUE_SCSI_CAP_SET_WORKING_DIR 0x4
+
+#define BLUE_SCSI_GET_WORKING_DIR 0x03
+#define BLUE_SCSI_SET_WORKING_DIR 0x02
 
 #define BLUE_SCSI_VENDOR "BLUESCSI"
 #define BLUE_SCSI_VERSION "1.0"
@@ -18,6 +24,9 @@
 #define BLUE_SCSI_MODE_SENSE_PAGE_LEN 0x2a
 #define BLUE_SCSI_MODE_SENSE_STR "BlueSCSI is the BEST STOLEN FROM BLUESCSI"
 
+#define BLUE_SCSI_TOGGLE_DEBUG 0xd6
+#define BLUE_SCSI_TOGGLE_DEBUG_SET 0x00
+#define BLUE_SCSI_TOGGLE_DEBUG_GET 0x01
 
 // Implementation
 
@@ -86,4 +95,48 @@ bool BlueSCSICommand::GetCapabilities(BlueSCSICapResult * result)
 	}
 	
 	return true;
+}
+
+
+bool BlueSCSICommand::SupportsLargeTransfers(const BlueSCSICapResult * result)
+{
+	return (result->flags & BLUE_SCSI_CAP_LARGE_TRANSFERS) != 0;
+}
+
+
+bool BlueSCSICommand::SupportsLargeSend(const BlueSCSICapResult * result)
+{
+	return (result->flags & BLUE_SCSI_CAP_LARGE_SEND) != 0;
+}
+
+
+bool BlueSCSICommand::SupportsSetWorkingDir(const BlueSCSICapResult * result)
+{
+	return (result->flags & BLUE_SCSI_CAP_SET_WORKING_DIR) != 0;
+}
+
+
+bool BlueSCSICommand::GetDebug(BlueSCSIDebugResult *result)
+{
+	uint8 command[] = { BLUE_SCSI_TOGGLE_DEBUG, BLUE_SCSI_TOGGLE_DEBUG_GET, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	return ExecuteCommand(command, sizeof(command), result, sizeof(*result));
+}
+
+
+bool BlueSCSICommand::SetDebug(bool enabled)
+{
+	uint8 command[] = { BLUE_SCSI_TOGGLE_DEBUG, BLUE_SCSI_TOGGLE_DEBUG_SET, (enabled ? 0x01 : 0x00), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	return ExecuteCommand(command, sizeof(command), NULL, 0);
+}
+
+
+bool BlueSCSICommand::GetWorkingDir(char * path, uint8 maxPathLen)
+{
+	return ToolboxMetadata(BLUE_SCSI_GET_WORKING_DIR, (uint8 *)path, maxPathLen);
+}
+
+
+bool BlueSCSICommand::SetWorkingDir(char * path, uint8 maxPathLen)
+{
+	return ToolboxMetadata(BLUE_SCSI_SET_WORKING_DIR, (uint8 *)path, maxPathLen);
 }
