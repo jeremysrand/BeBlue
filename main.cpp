@@ -88,7 +88,7 @@ static void inquiry(const char * dev)
 	
 	if (comm.SupportsSetWorkingDir(&capResult)) {
 		char workingDir[64];
-#if 0
+#if 1
 		strcpy(workingDir, "/");
 		if (!comm.SetWorkingDir(workingDir, sizeof(workingDir))) {
 			close(fd);
@@ -106,6 +106,33 @@ static void inquiry(const char * dev)
 		}
 	
 		printf("  Working Dir: %s\n", workingDir);
+	}
+	
+	uint8 numFiles = 0;
+	if (!comm.CountFiles(&numFiles)) {
+		close(fd);
+		if (comm.HasError())
+			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+		return;
+	}
+	printf("  Num Files: %u\n", (uint32)numFiles);
+	
+	if (numFiles > 0) {
+		BlueSCSIFileEntry * fileEntries = new(BlueSCSIFileEntry[numFiles]);
+		if (!comm.ListFiles(fileEntries, numFiles)) {
+			delete[] fileEntries;
+			close(fd);
+			if (comm.HasError())
+				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+			return;
+		}
+		
+		for (int i = 0; i < numFiles; i++) {
+			printf("\n");
+			printf("  FileEntry[%u].name = %s\n", (uint32)fileEntries[i].index, fileEntries[i].name);
+			printf("  FileEntry[%u].type = %u\n", (uint32)fileEntries[i].index, (uint32)fileEntries[i].type);
+			printf("  FileEntry[%u].size = %Lu\n", (uint32)fileEntries[i].index, comm.GetFileSize(&(fileEntries[i])));
+		}
 	}
 	
 	close(fd);

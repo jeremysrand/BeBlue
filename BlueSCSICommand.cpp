@@ -28,6 +28,9 @@
 #define BLUE_SCSI_TOGGLE_DEBUG_SET 0x00
 #define BLUE_SCSI_TOGGLE_DEBUG_GET 0x01
 
+#define BLUE_SCSI_COUNT_FILES 0xd2
+#define BLUE_SCSI_LIST_FILES 0xd0
+
 // Implementation
 
 BlueSCSICommand::BlueSCSICommand(int fd)
@@ -139,4 +142,37 @@ bool BlueSCSICommand::GetWorkingDir(char * path, uint8 maxPathLen)
 bool BlueSCSICommand::SetWorkingDir(char * path, uint8 maxPathLen)
 {
 	return ToolboxMetadata(BLUE_SCSI_SET_WORKING_DIR, (uint8 *)path, maxPathLen);
+}
+
+
+bool BlueSCSICommand::CountFiles(uint8 * result)
+{
+	uint8 command[] = { BLUE_SCSI_COUNT_FILES, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	return ExecuteCommand(command, sizeof(command), result, sizeof(*result));
+}
+
+
+bool BlueSCSICommand::ListFiles(BlueSCSIFileEntry * fileEntries, uint8 maxEntries)
+{
+	uint8 command[] = { BLUE_SCSI_LIST_FILES, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	return ExecuteCommand(command, sizeof(command), fileEntries, sizeof(*fileEntries) * maxEntries);
+}
+
+uint64 BlueSCSICommand::GetFileSize(BlueSCSIFileEntry * fileEntry) {
+	uint64 result = 0;
+	
+	result += fileEntry->size[0];
+	result <<= 8;
+	
+	result += fileEntry->size[1];
+	result <<= 8;
+	
+	result += fileEntry->size[2];
+	result <<= 8;
+	
+	result += fileEntry->size[3];
+	result <<= 8;
+	
+	result += fileEntry->size[4];
+	return result;
 }

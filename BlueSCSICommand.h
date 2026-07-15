@@ -4,6 +4,15 @@
 #define BLUE_SCSI_COMMAND_H
 
 
+// Defines
+
+#define BLUE_SCSI_MAX_FILE_NAME_LEN 32
+#define BLUE_SCSI_FILE_SIZE_BYTES 5
+
+#define BLUE_SCSI_FILE_TYPE 1
+#define BLUE_SCSI_DIR_TYPE  0
+
+
 // Interface
 
 struct BlueSCSICapResult {
@@ -14,6 +23,13 @@ struct BlueSCSICapResult {
 
 struct BlueSCSIDebugResult {
 	uint8 flag;
+};
+
+struct BlueSCSIFileEntry {
+	uint8 index;
+	uint8 type;
+	char name[BLUE_SCSI_MAX_FILE_NAME_LEN + 1];
+	uint8 size[BLUE_SCSI_FILE_SIZE_BYTES];
 };
 
 class BlueSCSICommand : public SCSICommand {
@@ -35,6 +51,10 @@ class BlueSCSICommand : public SCSICommand {
 		
 		bool GetWorkingDir(char * path, uint8 maxPathLen);
 		bool SetWorkingDir(char * path, uint8 maxPathLen);
+		
+		bool CountFiles(uint8 * result);
+		bool ListFiles(BlueSCSIFileEntry * fileEntries, uint8 maxEntries);
+		uint64 GetFileSize(BlueSCSIFileEntry * fileEntry);
 		
 	private:
 		bool ToolboxMetadata(uint8 subcommand, uint8 * data, uint8 dataLen);
