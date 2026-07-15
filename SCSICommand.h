@@ -2,20 +2,27 @@
 #define SCSI_COMMAND_H
 
 
+// Defines
+
 #define SCSI_SENSE_SIZE 16
 
+#define SCSI_INQ_VENDOR_STR_LEN 8
+#define SCSI_INQ_DEVICE_STR_LEN 16
+#define SCSI_INQ_VERSION_STR_LEN 4
 
-#define SCSI_INQ_VENDOR_LEN 8
-#define SCSI_INQ_DEVICE_LEN 16
-#define SCSI_INQ_VERSION_LEN 4
+#define SCSI_MODE_SENSE_BLOCK_DESC_LEN_OFFSET 3
+#define SCSI_MODE_SENSE_HEADER_SIZE 4
 
+
+// Interface
 
 struct SCSIInquiryResult {
 	uint8 type;
+	uint8 scsiVersion;
 	const char * typeStr;
-	char vendor[SCSI_INQ_VENDOR_LEN + 1];
-	char device[SCSI_INQ_DEVICE_LEN + 1];
-	char version[SCSI_INQ_VERSION_LEN + 1];
+	char vendorStr[SCSI_INQ_VENDOR_STR_LEN + 1];
+	char deviceStr[SCSI_INQ_DEVICE_STR_LEN + 1];
+	char versionStr[SCSI_INQ_VERSION_STR_LEN + 1];
 };
 
 
@@ -24,13 +31,15 @@ class SCSICommand {
 		SCSICommand(int fd);
 		~SCSICommand();
 	
+		bool HasError();
 		const char * GetErrorStr();
 		const uint8 * GetSense();
 		
 		bool Inquiry(SCSIInquiryResult * result);
+		bool ModeSense(uint8 page, uint8 * data, uint8 dataLen);
 		
-	private:
-		bool ExecuteCommand(uint8 * command, uint8 command_len, void * data, size_t data_len);
+	protected:
+		bool ExecuteCommand(uint8 * command, uint8 commandLen, void * data, size_t dataLen);
 		
 		void RaiseError(const char * str1, const char * str2 = NULL);
 		void RaiseError(const char * str, int errnum);

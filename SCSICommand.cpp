@@ -10,16 +10,22 @@
 #include "SCSICommand.h"
 
 
+// Defines
+
 #define SCSI_TIMEOUT 1000000
 
 #define SCSI_INQUIRY 0x12
-
 #define SCSI_INQ_TYPE_MASK 0x1f
-#define SCSI_INQ_VENDOR_OFFSET 8
-#define SCSI_INQ_DEVICE_OFFSET 16
-#define SCSI_INQ_VERSION_OFFSET 32
+#define SCSI_INQ_TYPE_OFFSET 0
+#define SCSI_INQ_SCSI_VERSION_OFFSET 2
+#define SCSI_INQ_VENDOR_STR_OFFSET 8
+#define SCSI_INQ_DEVICE_STR_OFFSET 16
+#define SCSI_INQ_VERSION_STR_OFFSET 32
+
+#define SCSI_MODE_SENSE 0x1a
 
 
+// Implementation
 
 SCSICommand::SCSICommand(int fd)
 	: fd(fd),
@@ -33,6 +39,11 @@ SCSICommand::~SCSICommand()
 	if (errorStr != NULL) {
 		delete[](errorStr);
 	}
+}
+
+
+bool SCSICommand::HasError() {
+	return errorStr != NULL;
 }
 
 
@@ -96,24 +107,29 @@ const char * SCSICommand::FormatError(const char * fmt, ...)
 }
 
 
-bool SCSICommand::ExecuteCommand(uint8 * command, uint8 command_len, void * data, size_t data_len)
+bool SCSICommand::ExecuteCommand(uint8 * command, uint8 commandLen, void * data, size_t dataLen)
 {
 	raw_device_command rdc;
 	int e;
 	
+	if (errorStr != NULL) {
+		delete[](errorStr);
+		errorStr = NULL;
+	}
+	
 	rdc.data = data;
-	rdc.data_length = data_len;
+	rdc.data_length = dataLen;
 	rdc.sense_data = sense;
 	rdc.sense_data_length = 0;
 	rdc.timeout = SCSI_TIMEOUT;
 	rdc.flags = B_RAW_DEVICE_DATA_IN;
-	rdc.command_length = command_len;
+	rdc.command_length = commandLen;
 	
-	if (command_len > sizeof(rdc.command)) {
-		RaiseError(FormatError("Commands was %u bytes long must be no more than %u bytes", (uint32)command_len, (uint32)sizeof(rdc.command)));
+	if (commandLen > sizeof(rdc.command)) {
+		RaiseError(FormatError("Commands was %u bytes long must be no more than %u bytes", (uint32)commandLen, (uint32)sizeof(rdc.command)));
 		return false;
 	}
-	memcpy(rdc.command, command, command_len);
+	memcpy(rdc.command, command, commandLen);
 	
 	memset(rdc.sense_data, 0, sizeof(rdc.sense_data));
 	
@@ -172,12 +188,22 @@ bool SCSICommand::Inquiry(SCSIInquiryResult * result)
 		return false;
 	}
 	
-	result->type = data.inquiry_data[0] & SCSI_INQ_TYPE_MASK;
-	result->typeStr = typeStrings[(result->type > NUM_ELEMS(typeStrings) ? NUM_ELEMS(typeStrings) : result->type)];
+	result->type = data.inquiry_data[SCSI_INQ_TYPE_OFFSET] & SCSI_INQ_TYPE_MASK;
+	result->typeStr = typeStrings[(result->type > NUM_ELEMS(typeStrings) ?
+		NUM_ELEMS(typeStrings) : result->type)];
+		
+	result->scsiVersion = data.inquiry_data[SCSI_INQ_SCSI_VERSION_OFFSET];
 	
-	copyString(result->vendor, &(data.inquiry_data[SCSI_INQ_VENDOR_OFFSET]), SCSI_INQ_VENDOR_LEN);
-	copyString(result->device, &(data.inquiry_data[SCSI_INQ_DEVICE_OFFSET]), SCSI_INQ_DEVICE_LEN);
-	copyString(result->version, &(data.inquiry_data[SCSI_INQ_VERSION_OFFSET]), SCSI_INQ_VERSION_LEN);
+	copyString(result->vendorStr, &(data.inquiry_data[SCSI_INQ_VENDOR_STR_OFFSET]), SCSI_INQ_VENDOR_STR_LEN);
+	copyString(result->deviceStr, &(data.inquiry_data[SCSI_INQ_DEVICE_STR_OFFSET]), SCSI_INQ_DEVICE_STR_LEN);
+	copyString(result->versionStr, &(data.inquiry_data[SCSI_INQ_VERSION_STR_OFFSET]), SCSI_INQ_VERSION_STR_LEN);
 	
 	return true;
+}
+
+
+bool SCSICommand::ModeSense(uint8 page, uint8 * data, uint8 dataLen)
+{
+	uint8 command[] = { SCSI_MODE_SENSE, 0x00, page, 0x00, dataLen, 0x00 };
+	return ExecuteCommand(command, sizeof(command), data, dataLen);
 }

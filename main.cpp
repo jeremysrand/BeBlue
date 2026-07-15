@@ -8,11 +8,16 @@
 #include <Entry.h>
 #include <Path.h>
 
-#include "SCSICommand.h"
+#include "BlueSCSICommand.h"
 
+
+// Defines
 
 #define SCSI_BUS "/dev/bus/scsi"
 #define SCSI_RAW_DEV_NAME "raw"
+
+
+// Implementation
 
 static void inquiry(const char * dev)
 {
@@ -25,26 +30,40 @@ static void inquiry(const char * dev)
 	}
 	
 	SCSIInquiryResult inqResult;
-	SCSICommand comm(fd);
+	BlueSCSICommand comm(fd);
 	
-	if (!comm.Inquiry(&inqResult)) {
-		fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+	if (!comm.IsBlueSCSIInquiry(&inqResult)) {
+		close(fd);
+		if (comm.HasError())
+			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
 	}
 	
-	printf("  Type:    %u (%s)\n", (uint32)inqResult.type, inqResult.typeStr);
-	printf("  Vendor:  \"%s\"\n", inqResult.vendor);
-	printf("  Device:  \"%s\"\n", inqResult.device);
-	printf("  Version: \"%s\"\n", inqResult.version);
+	printf("  Type:         %u (%s)\n", (uint32)inqResult.type, inqResult.typeStr);
+	printf("  SCSI Version: %u\n", (uint32)inqResult.scsiVersion);
+	printf("  Vendor:       \"%s\"\n", inqResult.vendorStr);
+	printf("  Device:       \"%s\"\n", inqResult.deviceStr);
+	printf("  Version:      \"%s\"\n", inqResult.versionStr);
 	
-	const uint8 * sense = comm.GetSense();
-	printf("  Sense:");
-	for (int i = 0; i < SCSI_SENSE_SIZE; i++) {
-		if ((i % 8) == 0)
-			printf("\n      ");
-		printf("0x%02x ", (int)sense[i]);
+	uint8 data[128];
+	if (!comm.IsBlueSCSIModeSense(data, sizeof(data))) {
+		close(fd);
+		if (comm.HasError())
+			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+		return;
 	}
-	printf("\n\n");
+	
+	BlueSCSICapResult capResult;
+	if (!comm.GetCapabilities(&capResult)) {
+		close(fd);
+		if (comm.HasError())
+			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
+		return;
+	}
+	
+	printf("  Capabilities:\n");
+	printf("    Version: %u\n", capResult.version);
+	printf("    Flags:   %u\n", capResult.flags);
 	
 	close(fd);
 }
