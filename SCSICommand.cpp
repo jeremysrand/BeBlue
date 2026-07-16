@@ -59,29 +59,20 @@ const uint8 * SCSICommand::GetSense()
 }
 
 
-void SCSICommand::RaiseError(const char * str1, const char * str2)
+void SCSICommand::RaiseError(const char * str)
 {
-	size_t len = strlen(str1);
-	if (str2 != NULL) {
-		len += 2 + strlen(str2);
-	}
-	
 	if (errorStr != NULL) {
 		delete[](errorStr);
 	}
 	
-	errorStr = new(char[len]);
-	if (str2 != NULL) {
-		sprintf(errorStr, "%s: %s", str1, str2);
-	} else {
-		sprintf(errorStr, "%s", str1);
-	}
+	errorStr = new(char[strlen(str)]);
+	strcpy(errorStr, str);
 }
 
 
-void SCSICommand::RaiseError(const char * str1, int errnum)
+void SCSICommand::RaiseError(const char * str, int errnum)
 {
-	RaiseError(str1, strerror(errnum));
+	RaiseError(FormatError("%s: %s", str, strerror(errnum)));
 }
 
 

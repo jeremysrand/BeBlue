@@ -41,7 +41,7 @@ class SCSICommand {
 	protected:
 		bool ExecuteCommand(uint8 * command, uint8 commandLen, void * data, size_t dataLen);
 		
-		void RaiseError(const char * str1, const char * str2 = NULL);
+		void RaiseError(const char * str);
 		void RaiseError(const char * str, int errnum);
 		
 		const char * FormatError(const char * fmt, ...);
