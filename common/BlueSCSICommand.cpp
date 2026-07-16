@@ -56,8 +56,8 @@
 
 // Implementation
 
-BlueSCSICommand::BlueSCSICommand(int fd)
-	: SCSICommand(fd)
+BlueSCSICommand::BlueSCSICommand(const char * dev)
+	: SCSICommand(dev)
 {
 }
 

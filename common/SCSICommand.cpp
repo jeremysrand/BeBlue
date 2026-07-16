@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,10 +28,14 @@
 
 // Implementation
 
-SCSICommand::SCSICommand(int fd)
-	: fd(fd),
+SCSICommand::SCSICommand(const char * dev)
+	: fd(-1),
 	  errorStr(NULL)
 {
+	if ((fd = open(dev, 0)) < 0) {
+		RaiseError(FormatError("Unable to open dev %s, %s", dev, strerror(errno)));
+		return;
+	}
 }
 
 
@@ -39,6 +44,8 @@ SCSICommand::~SCSICommand()
 	if (errorStr != NULL) {
 		delete[](errorStr);
 	}
+	if (fd >= 0)
+		close(fd);
 }
 
 
@@ -126,7 +133,7 @@ bool SCSICommand::ExecuteCommand(uint8 * command, uint8 commandLen, void * data,
 	
 	e = ioctl(fd, B_RAW_DEVICE_COMMAND, &rdc, sizeof(rdc));
 	if (e != 0) {
-		RaiseError("Error from raw command of device");
+		RaiseError(FormatError("Error from raw command of device: %s", strerror(errno)));
 		return false;
 	}
 	

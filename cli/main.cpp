@@ -21,19 +21,16 @@
 
 static void inquiry(const char * dev)
 {
-	int fd;
+	printf("Running against dev = %s\n", dev);
 	
-	printf("Running inquiry against dev = %s\n", dev);
-	if ((fd = open(dev, 0)) < 0) {
-		fprintf(stderr, "Unable top open dev %s, %s\n", dev, strerror(errno));
+	BlueSCSICommand comm(dev);
+	if (comm.HasError()) {
+		fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
 	}
 	
 	SCSIInquiryResult inqResult;
-	BlueSCSICommand comm(fd);
-	
 	if (!comm.IsBlueSCSIInquiry(&inqResult)) {
-		close(fd);
 		if (comm.HasError())
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
@@ -47,7 +44,6 @@ static void inquiry(const char * dev)
 	
 	uint8 data[128];
 	if (!comm.IsBlueSCSIModeSense(data, sizeof(data))) {
-		close(fd);
 		if (comm.HasError())
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
@@ -55,7 +51,6 @@ static void inquiry(const char * dev)
 	
 	BlueSCSICapResult capResult;
 	if (!comm.GetCapabilities(&capResult)) {
-		close(fd);
 		if (comm.HasError())
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
@@ -70,7 +65,6 @@ static void inquiry(const char * dev)
 
 #if 0
 	if (!comm.SetDebug(false)) {
-		close(fd);
 		if (comm.HasError())
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
@@ -79,7 +73,6 @@ static void inquiry(const char * dev)
 	
 	BlueSCSIDebugResult debug;
 	if (!comm.GetDebug(&debug)) {
-		close(fd);
 		if (comm.HasError())
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
@@ -91,7 +84,6 @@ static void inquiry(const char * dev)
 #if 1
 		strcpy(workingDir, "/");
 		if (!comm.SetWorkingDir(workingDir, sizeof(workingDir))) {
-			close(fd);
 			if (comm.HasError())
 				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 			return;
@@ -99,7 +91,6 @@ static void inquiry(const char * dev)
 		
 #endif
 		if (!comm.GetWorkingDir(workingDir, sizeof(workingDir))) {
-			close(fd);
 			if (comm.HasError())
 				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 			return;
@@ -110,7 +101,6 @@ static void inquiry(const char * dev)
 	
 	uint8 numFiles = 0;
 	if (!comm.CountFiles(&numFiles)) {
-		close(fd);
 		if (comm.HasError())
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
@@ -121,7 +111,6 @@ static void inquiry(const char * dev)
 		BlueSCSIFileEntry * fileEntries = new(BlueSCSIFileEntry[numFiles]);
 		if (!comm.ListFiles(fileEntries, numFiles)) {
 			delete[] fileEntries;
-			close(fd);
 			if (comm.HasError())
 				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 			return;
@@ -142,7 +131,6 @@ static void inquiry(const char * dev)
 			if (!comm.GetFile(fileEntries[0].index, 0, buffer, numBlocks * BLUE_SCSI_GET_FILE_BLOCK_SIZE)) {
 				delete[] fileEntries;
 				delete[] buffer;
-				close(fd);
 				if (comm.HasError())
 					fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 				return;
@@ -163,7 +151,6 @@ static void inquiry(const char * dev)
 				if (!comm.GetFile(fileEntries[0].index, i, buffer, BLUE_SCSI_GET_FILE_BLOCK_SIZE)) {
 					delete[] fileEntries;
 					delete[] buffer;
-					close(fd);
 					if (comm.HasError())
 						fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 					return;
@@ -184,7 +171,6 @@ static void inquiry(const char * dev)
 	
 	BlueSCSIListDevsResult listDevs;
 	if (!comm.ListDevices(&listDevs)) {
-		close(fd);
 		if (comm.HasError())
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return;
@@ -192,8 +178,6 @@ static void inquiry(const char * dev)
 	printf("\n");
 	for (int i = 0; i < BLUE_SCSI_MAX_DEVICES; i++)
 		printf("  Device[%d] = %02x\n", i, (uint32)listDevs.devices[i]);
-	
-	close(fd);
 }
 
 static void walkDevs(const char * path)

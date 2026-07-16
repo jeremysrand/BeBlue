@@ -28,7 +28,7 @@ struct SCSIInquiryResult {
 
 class SCSICommand {
 	public:
-		SCSICommand(int fd);
+		SCSICommand(const char * dev);
 		~SCSICommand();
 	
 		bool HasError();
