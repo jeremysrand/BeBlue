@@ -1,1 +1,3 @@
+// Defines
+
 #define NUM_ELEMS(a) (sizeof(a) / sizeof((a)[0]))

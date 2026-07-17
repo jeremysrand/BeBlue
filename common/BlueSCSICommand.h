@@ -1,4 +1,6 @@
-#include "SCSICommand.h"
+#include <Path.h>
+
+#include "common/SCSICommand.h"
 
 #ifndef BLUE_SCSI_COMMAND_H
 #define BLUE_SCSI_COMMAND_H
@@ -80,7 +82,7 @@ struct BlueSCSINetworkJoinRequest {
 
 class BlueSCSICommand : public SCSICommand {
 	public:
-		BlueSCSICommand(const char * dev);
+		BlueSCSICommand(BPath * path);
 		~BlueSCSICommand();
 		
 		bool IsBlueSCSIInquiry(SCSIInquiryResult * result);

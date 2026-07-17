@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "BlueSCSICommand.h"
+#include "common/BlueSCSICommand.h"
 
 
 // Defines
@@ -56,8 +56,8 @@
 
 // Implementation
 
-BlueSCSICommand::BlueSCSICommand(const char * dev)
-	: SCSICommand(dev)
+BlueSCSICommand::BlueSCSICommand(BPath * path)
+	: SCSICommand(path)
 {
 }
 

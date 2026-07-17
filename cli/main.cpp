@@ -1,207 +1,102 @@
-#include <errno.h>
+#include <getopt.h>
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 
-#include <Directory.h>
-#include <Entry.h>
 #include <Path.h>
 
-#include "BlueSCSICommand.h"
+#include "common/BlueSCSIDevice.h"
+#include "common/BlueSCSIScan.h"
 
-
-// Defines
-
-#define SCSI_BUS "/dev/bus/scsi"
-#define SCSI_RAW_DEV_NAME "raw"
+#include "cli/CommandRegistry.h"
+#include "cli/Command.h"
+#include "cli/GlobalOpts.h"
 
 
 // Implementation
 
-static void inquiry(const char * dev)
+static void usage(const char * argv0, CommandRegistry & registry)
 {
-	printf("Running against dev = %s\n", dev);
-	
-	BlueSCSICommand comm(dev);
-	if (comm.HasError()) {
-		fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return;
-	}
-	
-	SCSIInquiryResult inqResult;
-	if (!comm.IsBlueSCSIInquiry(&inqResult)) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return;
-	}
-	
-	printf("  Type:         %u (%s)\n", (uint32)inqResult.type, inqResult.typeStr);
-	printf("  SCSI Version: %u\n", (uint32)inqResult.scsiVersion);
-	printf("  Vendor:       \"%s\"\n", inqResult.vendorStr);
-	printf("  Device:       \"%s\"\n", inqResult.deviceStr);
-	printf("  Version:      \"%s\"\n", inqResult.versionStr);
-	
-	uint8 data[128];
-	if (!comm.IsBlueSCSIModeSense(data, sizeof(data))) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return;
-	}
-	
-	BlueSCSICapResult capResult;
-	if (!comm.GetCapabilities(&capResult)) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return;
-	}
-	
-	printf("  Capabilities:\n");
-	printf("    Version:         %u\n", capResult.version);
-	printf("    Flags:           %u\n", capResult.flags);
-	printf("    Large Transfers: %s\n", comm.SupportsLargeTransfers(capResult) ? "Supported" : "Unsupported");
-	printf("    Large Send:      %s\n", comm.SupportsLargeSend(capResult) ? "Supported" : "Unsupported");
-	printf("    Set Working Dir: %s\n", comm.SupportsSetWorkingDir(capResult) ? "Supported" : "Unsupported");
-
-#if 0
-	if (!comm.SetDebug(false)) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return;
-	}
-#endif
-	
-	BlueSCSIDebugResult debug;
-	if (!comm.GetDebug(&debug)) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return;
-	}
-	printf("  Debug: %s\n", (debug.flag ? "Enabled" : "Disabled"));
-	
-	if (comm.SupportsSetWorkingDir(capResult)) {
-		char workingDir[64];
-#if 1
-		strcpy(workingDir, "/");
-		if (!comm.SetWorkingDir(workingDir, sizeof(workingDir))) {
-			if (comm.HasError())
-				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-			return;
-		}
-		
-#endif
-		if (!comm.GetWorkingDir(workingDir, sizeof(workingDir))) {
-			if (comm.HasError())
-				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-			return;
-		}
-	
-		printf("  Working Dir: %s\n", workingDir);
-	}
-	
-	uint8 numFiles = 0;
-	if (!comm.CountFiles(&numFiles)) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return;
-	}
-	printf("  Num Files: %u\n", (uint32)numFiles);
-	
-	if (numFiles > 0) {
-		BlueSCSIFileEntry * fileEntries = new(BlueSCSIFileEntry[numFiles]);
-		if (!comm.ListFiles(fileEntries, numFiles)) {
-			delete[] fileEntries;
-			if (comm.HasError())
-				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-			return;
-		}
-		
-		for (int i = 0; i < numFiles; i++) {
-			printf("\n");
-			printf("  FileEntry[%u].name = %s\n", (uint32)fileEntries[i].index, fileEntries[i].name);
-			printf("  FileEntry[%u].type = %u\n", (uint32)fileEntries[i].index, (uint32)fileEntries[i].type);
-			printf("  FileEntry[%u].size = %Lu\n", (uint32)fileEntries[i].index, comm.GetFileSize(fileEntries[i]));
-		}
-		
-		if (strcmp(fileEntries[0].name, "log.txt") == 0) {
-			uint32 numBlocks = comm.GetFileNumBlocks(fileEntries[0]);
-#if 0
-			// Large transfer test
-			char * buffer = new char[numBlocks * BLUE_SCSI_GET_FILE_BLOCK_SIZE];
-			if (!comm.GetFile(fileEntries[0].index, 0, buffer, numBlocks * BLUE_SCSI_GET_FILE_BLOCK_SIZE)) {
-				delete[] fileEntries;
-				delete[] buffer;
-				if (comm.HasError())
-					fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-				return;
-			}
-			
-			buffer[comm.GetFileSize(fileEntries[0])] = '\0';
-			printf("=======  LOG START =======\n");
-			puts(buffer);
-			printf("=======   LOG END  =======\n");
-			delete[] buffer;
-#endif
-#if 0
-			// No large transfer test
-			char * buffer  = new char[BLUE_SCSI_GET_FILE_BLOCK_SIZE];
-			uint32 finalBlockSize = comm.GetFileSize(fileEntries[0]) % BLUE_SCSI_GET_FILE_BLOCK_SIZE;
-			printf("=======  LOG START =======\n");
-			for (int i = 0; i < numBlocks; i++) {
-				if (!comm.GetFile(fileEntries[0].index, i, buffer, BLUE_SCSI_GET_FILE_BLOCK_SIZE)) {
-					delete[] fileEntries;
-					delete[] buffer;
-					if (comm.HasError())
-						fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-					return;
-				}
-				if (i != numBlocks - 1) {
-					fwrite(buffer, BLUE_SCSI_GET_FILE_BLOCK_SIZE, 1, stdout);
-				} else {
-					fwrite(buffer, finalBlockSize, 1, stdout);
-				}
-			}
-			printf("\n=======   LOG END  =======\n");
-			
-#endif
-		}
-		
-		delete[] fileEntries;
-	}
-	
-	BlueSCSIListDevsResult listDevs;
-	if (!comm.ListDevices(&listDevs)) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return;
-	}
-	printf("\n");
-	for (int i = 0; i < BLUE_SCSI_MAX_DEVICES; i++)
-		printf("  Device[%d] = %02x\n", i, (uint32)listDevs.devices[i]);
+	printf("USAGE: %s [-h] [-d device] [-v] command...\n", argv0);
+	printf("  Commands:\n");
+	registry.PrintUsage();
 }
 
-static void walkDevs(const char * path)
-{
-	BDirectory dir(path);
-	if (dir.InitCheck() == B_OK) {
-		BEntry entry;
-		while (dir.GetNextEntry(&entry) >= 0) {
-			BPath name;
-			entry.GetPath(&name);
-			if (entry.IsDirectory())
-				walkDevs(name.Path());
-			else if (strcmp(name.Leaf(), SCSI_RAW_DEV_NAME) == 0)
-				inquiry(name.Path());
-		}
-	}
-}
 
 int main(int argc, char *argv[]) 
 {
-	if (argc >= 2)
-		inquiry(argv[1]);
-	else
-		walkDevs(SCSI_BUS);
+	int c;
+	const char * devicePath = NULL;
 	
-	exit(0);
+	GlobalOpts globalOpts;
+	CommandRegistry registry;
+	
+	while ((c = getopt(argc, argv, "hvd:")) != EOF) {
+		switch (c) {
+			case 'h':
+			case '?':
+				usage(argv[0], registry);
+				exit(-1);
+				
+			case 'v':
+				globalOpts.SetVerbose(true);
+				break;
+				
+			case 'd':
+				devicePath = optarg;
+				break;
+		}
+	}
+	
+	if (optind >= argc) {
+		usage(argv[0], registry);
+		exit(-1);
+	}
+	
+	Command * command = registry.GetCommand(argv[optind]);
+	if (command == NULL) {
+		usage(argv[0], registry);
+		exit(-1);
+	}
+		
+	BlueSCSIDevice * device = NULL;
+	BlueSCSIScan * scan = NULL;
+	
+	command->SetGlobalOpts(globalOpts);
+	if (command->RequiresOneDevice()) {
+		if (devicePath != NULL) {
+			BPath path(devicePath);
+			device = new BlueSCSIDevice(&path, command);
+			if (!device->IsBlueSCSI()) {
+				delete device;
+				fprintf(stderr, "ERROR: Device at %s is not a BlueSCSI.\n",
+					devicePath);
+				exit(-1);
+			}
+			globalOpts.SetDevice(device);
+			command->VerbosePrintf("Using BlueSCSI device %s\n",
+				globalOpts.Device().PathString());
+		} else {
+			scan = new BlueSCSIScan(command);
+			if (scan->NumDevices() == 0) {
+				delete scan;
+				fprintf(stderr, "ERROR: No BlueSCSI devices found.\n");
+				exit(-1);
+			}
+			globalOpts.SetDevice(scan->DeviceAt(0));
+			command->VerbosePrintf("Found %d BlueSCSI devices, using %s\n",
+					scan->NumDevices(), globalOpts.Device().PathString()); 
+		}
+	}
+	
+	int result = -1;	
+	if (!command->ParseArgs(argc - optind, &(argv[optind])))
+		usage(argv[0], registry);
+	else
+		result = command->Execute();
+	
+	if (scan != NULL)
+		delete scan;
+	if (device != NULL)
+		delete device;
+	
+	exit(result);
 }

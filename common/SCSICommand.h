@@ -1,3 +1,5 @@
+#include <Path.h>
+
 #ifndef SCSI_COMMAND_H
 #define SCSI_COMMAND_H
 
@@ -28,7 +30,7 @@ struct SCSIInquiryResult {
 
 class SCSICommand {
 	public:
-		SCSICommand(const char * dev);
+		SCSICommand(BPath * path);
 		~SCSICommand();
 	
 		bool HasError();

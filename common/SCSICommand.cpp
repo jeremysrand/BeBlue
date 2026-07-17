@@ -7,8 +7,8 @@
 #include <scsi.h>
 #include <CAM.h>
 
-#include "Common.h"
-#include "SCSICommand.h"
+#include "common/Common.h"
+#include "common/SCSICommand.h"
 
 
 // Defines
@@ -28,10 +28,11 @@
 
 // Implementation
 
-SCSICommand::SCSICommand(const char * dev)
+SCSICommand::SCSICommand(BPath * path)
 	: fd(-1),
 	  errorStr(NULL)
 {
+	const char * dev = path->Path();
 	if ((fd = open(dev, 0)) < 0) {
 		RaiseError(FormatError("Unable to open dev %s, %s", dev, strerror(errno)));
 		return;
