@@ -1,7 +1,13 @@
 #include <string.h>
 
+#include "cli/Capabilities.h"
 #include "cli/CommandRegistry.h"
+#include "cli/Debug.h"
+#include "cli/Devices.h"
+#include "cli/Inquiry.h"
+#include "cli/Scan.h"
 #include "cli/Testing.h"
+#include "cli/WorkingDir.h"
 
 
 // Implementation
@@ -9,6 +15,12 @@
 CommandRegistry::CommandRegistry()
 	: commands()
 {
+	commands.AddItem(new Scan());
+	commands.AddItem(new Inquiry());
+	commands.AddItem(new Capabilities());
+	commands.AddItem(new Debug());
+	commands.AddItem(new Devices());
+	commands.AddItem(new WorkingDir());
 	commands.AddItem(new Testing());	
 }
 

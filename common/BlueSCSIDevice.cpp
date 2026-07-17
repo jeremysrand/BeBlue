@@ -1,3 +1,7 @@
+#include <stdlib.h>
+
+#include <Path.h>
+
 #include "common/BlueSCSIDevice.h"
 
 
@@ -10,7 +14,10 @@
 
 BlueSCSIDevice::BlueSCSIDevice(BPath * pathArg, BlueSCSIDeviceErrorHandler * errHandlerArg)
 	: isBlueSCSI(false),
-	  path(*pathArg),
+	  bus(0),
+	  target(0),
+	  lun(0),
+	  path(pathArg->Path(), NULL, true),
 	  comm(&path),
 	  inquiry(),
 	  capabilities(),
@@ -23,6 +30,24 @@ BlueSCSIDevice::BlueSCSIDevice(BPath * pathArg, BlueSCSIDeviceErrorHandler * err
 bool BlueSCSIDevice::IsBlueSCSI()
 {
 	return isBlueSCSI;
+}
+
+
+int32 BlueSCSIDevice::Bus()
+{
+	return bus;
+}
+
+
+int32 BlueSCSIDevice::Target()
+{
+	return target;
+}
+
+
+int32 BlueSCSIDevice::Lun()
+{
+	return lun;
 }
 
 
@@ -53,6 +78,21 @@ void BlueSCSIDevice::Init()
 	}
 	
 	isBlueSCSI = true;
+	
+	BPath lunPath;
+	if (path.GetParent(&lunPath) == B_NO_ERROR) {
+		lun = (int32)atoi(lunPath.Leaf());
+		
+		BPath targetPath;
+		if (lunPath.GetParent(&targetPath) == B_NO_ERROR) {
+			target = (int32)atoi(targetPath.Leaf());
+			
+			BPath busPath;
+			if (targetPath.GetParent(&busPath) == B_NO_ERROR) {
+				bus = (int32)atoi(busPath.Leaf());	
+			}
+		}
+	}
 }
 
 

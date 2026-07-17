@@ -17,7 +17,7 @@ const char * Testing::Command()
 
 const char * Testing::Usage()
 {
-	return "testing";
+	return Command();
 }
 
 
@@ -30,7 +30,7 @@ bool Testing::RequiresOneDevice()
 bool Testing::ParseArgs(int argc, const char * argv[])
 {
 	if (argc != 1) {
-		fprintf(stderr, "The testing command takes no arguments\n");
+		fprintf(stderr, "The %s command takes no arguments\n", Command());
 		return false;
 	}
 	return true;
@@ -48,57 +48,6 @@ int Testing::Execute()
 	}
 	
 	BlueSCSICommand & comm = device.Command();
-	
-	const SCSIInquiryResult & inqResult = device.Inquiry();
-	printf("  Type:         %u (%s)\n", (uint32)inqResult.type, inqResult.typeStr);
-	printf("  SCSI Version: %u\n", (uint32)inqResult.scsiVersion);
-	printf("  Vendor:       \"%s\"\n", inqResult.vendorStr);
-	printf("  Device:       \"%s\"\n", inqResult.deviceStr);
-	printf("  Version:      \"%s\"\n", inqResult.versionStr);
-	
-	const BlueSCSICapResult & capResult = device.Capabilities();
-	printf("  Capabilities:\n");
-	printf("    Version:         %u\n", capResult.version);
-	printf("    Flags:           %u\n", capResult.flags);
-	printf("    Large Transfers: %s\n", device.SupportsLargeTransfers() ? "Supported" : "Unsupported");
-	printf("    Large Send:      %s\n", device.SupportsLargeSend() ? "Supported" : "Unsupported");
-	printf("    Set Working Dir: %s\n", device.SupportsSetWorkingDir() ? "Supported" : "Unsupported");
-
-#if 0
-	if (!comm.SetDebug(false)) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return -1;
-	}
-#endif
-	
-	BlueSCSIDebugResult debug;
-	if (!comm.GetDebug(&debug)) {
-		if (comm.HasError())
-			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-		return -1;
-	}
-	printf("  Debug: %s\n", (debug.flag ? "Enabled" : "Disabled"));
-	
-	if (comm.SupportsSetWorkingDir(capResult)) {
-		char workingDir[64];
-#if 1
-		strcpy(workingDir, "/");
-		if (!comm.SetWorkingDir(workingDir, sizeof(workingDir))) {
-			if (comm.HasError())
-				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-			return -1;
-		}
-		
-#endif
-		if (!comm.GetWorkingDir(workingDir, sizeof(workingDir))) {
-			if (comm.HasError())
-				fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
-			return -1;
-		}
-	
-		printf("  Working Dir: %s\n", workingDir);
-	}
 	
 	uint8 numFiles = 0;
 	if (!comm.CountFiles(&numFiles)) {

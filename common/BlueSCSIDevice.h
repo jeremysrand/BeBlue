@@ -23,6 +23,10 @@ class BlueSCSIDevice
 		const BPath & Path();
 		const char * PathString();
 		
+		int32 Bus();
+		int32 Target();
+		int32 Lun();
+		
 		BlueSCSICommand & Command();
 		
 		const SCSIInquiryResult & Inquiry();
@@ -41,6 +45,9 @@ class BlueSCSIDevice
 
 	private:
 		bool isBlueSCSI;
+		int32 bus;
+		int32 target;
+		int32 lun;
 		BPath path;
 		BlueSCSICommand comm;
 		SCSIInquiryResult inquiry;
