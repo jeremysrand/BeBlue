@@ -161,8 +161,31 @@ bool BlueSCSIGet::GetFromRightDir()
 }
 
 
-bool BlueSCSIGet::GetFile(const BlueSCSIFileEntry * fileEntry, BEntry * entry)
+bool BlueSCSIGet::GetFile(const BlueSCSIFileEntry * fileEntry, BEntry * entryArg)
 {
+	BEntry * entry = entryArg;
+	BEntry localEntry;
+	if (entry == NULL) {
+		if (RaiseError("Unable to create entry for file in current working dir",
+			localEntry.SetTo(fileEntry->name)) != B_NO_ERROR)
+			return false;
+		
+		entry = &localEntry;
+	} else if ((entry->Exists()) &&
+		(entry->IsDirectory())) {
+		BDirectory dir(entry);
+		
+		if (RaiseError("Unable to get destination directory",
+			dir.InitCheck()) != B_NO_ERROR)
+			return false;
+		
+		if (RaiseError("Unable to create entry for file in dest dir",
+			localEntry.SetTo(&dir, fileEntry->name)) != B_NO_ERROR)
+			return false;
+		
+		entry = &localEntry;
+	}
+	
 	uint32 openMode = B_WRITE_ONLY | B_CREATE_FILE;
 	if (force)
 		openMode |= B_ERASE_FILE;
@@ -185,9 +208,10 @@ bool BlueSCSIGet::GetFile(const BlueSCSIFileEntry * fileEntry, BEntry * entry)
 		if (bytesRead > bytesLeft)
 			bytesRead = bytesLeft;
 			
-		if (RaiseError("Unable to write to destinatin file",
-			destFile.Write(buffer, bytesRead)) != B_NO_ERROR)
+		if (destFile.Write(buffer, bytesRead) != bytesRead) {
+			HandleGetError("Unable to write contents to file");
 			return false;
+		}
 		
 		bytesLeft -= bytesRead;
 		blockOffset += (bytesRead / BLUE_SCSI_GET_FILE_BLOCK_SIZE);
@@ -197,7 +221,7 @@ bool BlueSCSIGet::GetFile(const BlueSCSIFileEntry * fileEntry, BEntry * entry)
 }
 
 
-bool BlueSCSIGet::GetDir(const BlueSCSIFileEntry * fileEntry, BEntry * entry)
+bool BlueSCSIGet::GetDir(const BlueSCSIFileEntry * fileEntry, BEntry * entryArg)
 {
 	HandleGetError("TODO - Write this code!");
 	return false;

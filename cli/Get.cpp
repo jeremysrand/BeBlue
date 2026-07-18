@@ -75,12 +75,14 @@ int Get::Execute()
 		return -1;
 	}
 	
-	BEntry entry(dest != NULL ? dest : get.Filename(), true);
-	if (entry.InitCheck() != B_NO_ERROR) {
-		fprintf(stderr, "ERROR: Unable to get entry for destination\n");
-		return -1;
+	BEntry entry;
+	if (dest != NULL) {
+		if (entry.SetTo(dest) != B_NO_ERROR) {
+			fprintf(stderr, "ERROR: Unable to get entry for destination\n");
+			return -1;
+		}
+		get.SetDest(&entry);
 	}
-	get.SetDest(&entry);
 	
 	get.SetRecurse(globalOpts->ShouldRecurse());
 	get.SetForce(globalOpts->ShouldForce());
