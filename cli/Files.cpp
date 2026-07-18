@@ -129,6 +129,8 @@ int Files::ListFiles(const char * path)
 			fileEntries[i].name);
 	}
 	printf("+-----------------------------------------------------------------+\n");
+	
+	delete[] fileEntries;
 	return 0;
 }
 

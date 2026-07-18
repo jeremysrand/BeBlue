@@ -38,10 +38,12 @@ class BlueSCSIDevice
 		
 		void SetErrorHandler(BlueSCSIDeviceErrorHandler * errHandlerArg);
 		
+		bool SplitPath(const char * path, char * dir, char * filename);
 
+		void HandleError(const char * err);
+		
 	private:
 		void Init();
-		void HandleError(const char * err);
 
 	private:
 		bool isBlueSCSI;

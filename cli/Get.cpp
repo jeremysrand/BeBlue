@@ -1,5 +1,9 @@
+#include <Entry.h>
+
 #include "cli/GlobalOpts.h"
 #include "cli/Get.h"
+
+#include "common/BlueSCSIGet.h"
 
 
 // Implementation
@@ -52,14 +56,39 @@ bool Get::ParseArgs(int argc, const char * argv[])
 }
 
 
+void Get::HandleGetError(const char * err, status_t status)
+{
+	fprintf(stderr, "ERROR: %s\n", err);
+	if (status != B_NO_ERROR)
+		fprintf(stderr, "    %s\n", strerror(status));
+}
+
+
 int Get::Execute()
 {
-	printf("src:     %s\n", src);
-	printf("dest:    %s\n", dest != NULL ? dest : "<NONE>");
-	printf("recurse: %s\n", globalOpts->ShouldRecurse() ? "ON" : "OFF");
-	printf("force:   %s\n", globalOpts->ShouldForce() ? "ON" : "OFF");
+	BlueSCSIDevice & device = globalOpts->Device();
 	
-	// TODO - Write this...
+	BlueSCSIGet get(device, this);
+	if (!get.SetSrc(src)) {
+		fprintf(stderr, "ERROR: Unable to parse src %s into dir and filename\n",
+			src);
+		return -1;
+	}
+	
+	BEntry entry(dest != NULL ? dest : get.Filename(), true);
+	if (entry.InitCheck() != B_NO_ERROR) {
+		fprintf(stderr, "ERROR: Unable to get entry for destination\n");
+		return -1;
+	}
+	get.SetDest(&entry);
+	
+	get.SetRecurse(globalOpts->ShouldRecurse());
+	get.SetForce(globalOpts->ShouldForce());
+	
+	if (!get.Get()) {
+		fprintf(stderr, "ERROR: Get operation failed\n");
+		return -1;
+	}
 	
 	return 0;
 }

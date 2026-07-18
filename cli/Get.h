@@ -1,12 +1,15 @@
 #include "cli/Command.h"
 
+#include "common/BlueSCSIGet.h"
+
+
 #ifndef CLI_GET_H
 #define CLI_GET_H
 
 
 // Interface
 
-class Get : public Command {
+class Get : public Command, BlueSCSIGetErrorHandler {
 	public:
 		Get();
 		
@@ -15,6 +18,8 @@ class Get : public Command {
 		virtual bool RequiresOneDevice();
 		virtual bool ParseArgs(int argc, const char * argv[]);
 		virtual int Execute();
+		
+		virtual void HandleGetError(const char * err, status_t status);
 		
 	private:
 		const char * src;

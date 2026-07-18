@@ -155,3 +155,81 @@ bool BlueSCSIDevice::SupportsSetWorkingDir()
 {
 	return comm.SupportsSetWorkingDir(capabilities);
 }
+
+
+bool BlueSCSIDevice::SplitPath(const char * path, char * dir, char * filename)
+{
+	size_t pathLen = strlen(path);
+	
+	if (pathLen == 0) {
+		HandleError("A path must have one or more characters in it");
+		return false;
+	}
+
+	int lastSlashIndex = -1;
+	for (int i = pathLen - 1; i >= 0; i--) {
+		if (path[i] == '/') {
+			lastSlashIndex = i;
+			break;
+		}
+	}
+	
+	if (lastSlashIndex == pathLen - 1) {
+		HandleError("A path must not end in a slash");
+		return false;
+	}
+	
+	int startOfFilename = lastSlashIndex + 1;
+	if ((pathLen - startOfFilename)	> BLUE_SCSI_MAX_FILE_NAME_LEN) {
+		HandleError("File name too long");
+		return false;
+	}
+	
+	strcpy(filename, &(path[startOfFilename]));
+	
+	if (lastSlashIndex == -1) {
+		// No directory in the path so it is a file in the cwd.
+		dir[0] = '\0';
+		return true;
+	}
+	
+	if (!SupportsSetWorkingDir()) {
+		HandleError("Path contains at least one directory but setting cwd is not supported");
+		return false;
+	}
+	
+	char cwd[BLUE_SCSI_MAX_WORKING_DIR_LEN];
+	if (!comm.GetWorkingDir(cwd, sizeof(cwd)))
+		return false;
+	
+	if (path[0] == '/') {
+		if (lastSlashIndex >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
+			HandleError("The directory portion of the path is too long");
+			return false;
+		}
+		if (lastSlashIndex == 0)
+			lastSlashIndex++;
+		memcpy(dir, path, lastSlashIndex);
+		dir[lastSlashIndex] = '\0';
+	} else {
+		size_t cwdLen = strlen(cwd);
+		if (cwdLen + lastSlashIndex + 1 >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
+			HandleError("The directory portion of the path is too long");
+			return false;
+		}
+		strcpy(dir, cwd);
+		char * ptr = &(dir[cwdLen - 1]);
+		if (*ptr != '/')
+			ptr++;
+		*ptr = '/';
+		ptr++;
+		
+		memcpy(ptr, path, lastSlashIndex);
+		ptr += lastSlashIndex;
+		*ptr = '\0';
+	}
+	
+	if (strcmp(cwd, dir) == 0)
+		dir[0] = '\0';
+	return true;
+}
