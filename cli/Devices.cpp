@@ -30,7 +30,7 @@ bool Devices::RequiresOneDevice()
 bool Devices::ParseArgs(int argc, const char * argv[])
 {
 	if (argc != 1) {
-		fprintf(stderr, "The %s command takes no arguments\n", Command());
+		fprintf(stderr, "ERROR: The %s command takes no arguments\n", Command());
 		return false;
 	}
 	return true;
@@ -75,10 +75,15 @@ int Devices::Execute()
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return -1;
 	}
-	printf("Devices on %s:\n", device.PathString());
+	printf("Devices on %s:\n\n", device.PathString());
+	
+	printf("+------------------------------------+\n");
+	printf("| %-3s| %-6s| %-22s|\n", "ID", "Type", "Description");
+	printf("|------------------------------------|\n");
 	for (int i = 0; i < BLUE_SCSI_MAX_DEVICES; i++)
-		printf("  ID[%d] = %-16s (0x%02x)\n", i, DeviceStr((uint32)listDevs.devices[i]),
-			(uint32)listDevs.devices[i]);
+		printf("| %-3d| 0x%02x  | %-22s|\n", i, (uint32)listDevs.devices[i],
+			DeviceStr((uint32)listDevs.devices[i]));
+	printf("+------------------------------------+\n");
 
 	return 0;
 }

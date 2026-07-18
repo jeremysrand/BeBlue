@@ -30,7 +30,7 @@ bool Inquiry::RequiresOneDevice()
 bool Inquiry::ParseArgs(int argc, const char * argv[])
 {
 	if (argc != 1) {
-		fprintf(stderr, "The %s command takes no arguments\n", Command());
+		fprintf(stderr, "ERROR: The %s command takes no arguments\n", Command());
 		return false;
 	}
 	return true;

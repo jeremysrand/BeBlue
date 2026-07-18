@@ -19,10 +19,18 @@ class GlobalOpts {
 		
 		bool IsVerbose();
 		void SetVerbose(bool arg);
+		
+		bool ShouldRecurse();
+		void SetRecurse(bool arg);
+		
+		bool ShouldForce();
+		void SetForce(bool arg);
 	
 	private:
 		BlueSCSIDevice * device;
 		bool verbose;
+		bool recurse;
+		bool force;
 };
 
 #endif

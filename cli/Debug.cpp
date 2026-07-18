@@ -39,7 +39,7 @@ bool Debug::ParseArgs(int argc, const char * argv[])
 	}
 	
 	if (argc != 2) {
-		fprintf(stderr, "The %s command takes zero or one argument\n", Command());
+		fprintf(stderr, "ERROR: The %s command takes zero or one argument\n", Command());
 		return false;
 	}
 	
@@ -53,7 +53,7 @@ bool Debug::ParseArgs(int argc, const char * argv[])
 		return true;
 	}
 	
-	fprintf(stderr, "The %s command argument must me \"on\" or \"off\"\n", Command());
+	fprintf(stderr, "ERROR: The %s command argument must me \"on\" or \"off\"\n", Command());
 	return false;
 }
 

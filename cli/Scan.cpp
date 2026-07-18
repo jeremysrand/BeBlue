@@ -33,7 +33,7 @@ bool Scan::RequiresOneDevice()
 bool Scan::ParseArgs(int argc, const char * argv[])
 {
 	if (argc != 1) {
-		fprintf(stderr, "The %s command takes no arguments\n", Command());
+		fprintf(stderr, "ERROR: The %s command takes no arguments\n", Command());
 		return false;
 	}
 	return true;
@@ -42,17 +42,24 @@ bool Scan::ParseArgs(int argc, const char * argv[])
 
 int Scan::Execute()
 {
-	printf("%-3s %-3s %-3s %-8s %-8s %-16s %-4s\n", "Bus", "ID", "LUN", "Type",
+	if (globalOpts->HasDevice())
+		printf("Scanning %s for a BlueSCSI device:\n\n",
+			globalOpts->Device().PathString());
+	else
+		printf("Scanning for BlueSCSI devices on all SCSI busses:\n\n");
+	
+	printf("+------------------------------------------------------------+\n");
+	printf("| %-4s| %-3s| %-4s| %-8s| %-8s| %-16s| %-4s|\n", "Bus", "ID", "LUN", "Type",
 		"Vendor", "Device", "Rev");
-	printf("-----------------------------------------------------\n");
+	printf("|------------------------------------------------------------|\n");
 	if (globalOpts->HasDevice()) {
 		PrintDevice(globalOpts->Device());
-		return 0;
+	} else {
+		BlueSCSIScan scan;
+		for (int32 i = 0; i < scan.NumDevices(); i++)
+			PrintDevice(*scan.DeviceAt(i));
 	}
-	
-	BlueSCSIScan scan;
-	for (int32 i = 0; i < scan.NumDevices(); i++)
-		PrintDevice(*scan.DeviceAt(i));
+	printf("+------------------------------------------------------------+\n");
 	
 	return 0;	
 }
@@ -63,7 +70,7 @@ void Scan::PrintDevice(BlueSCSIDevice & device)
 	const SCSIInquiryResult & inquiry = device.Inquiry();
 	
 	VerbosePrintf("%s:\n", device.PathString());
-	printf("%3d %3d %3d %-8s %-8s %-16s %-4s\n", device.Bus(), device.Target(),
+	printf("| %-4d| %-3d| %-4d| %-8s| %-8s| %-16s| %-4s|\n", device.Bus(), device.Target(),
 		device.Lun(), inquiry.typeStr, inquiry.vendorStr, inquiry.deviceStr,
 		inquiry.versionStr);
 }

@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	GlobalOpts globalOpts;
 	CommandRegistry registry;
 	
-	while ((c = getopt(argc, argv, "hvd:")) != EOF) {
+	while ((c = getopt(argc, argv, "hvrfd:")) != EOF) {
 		switch (c) {
 			case 'h':
 			case '?':
@@ -38,6 +38,14 @@ int main(int argc, char *argv[])
 				
 			case 'v':
 				globalOpts.SetVerbose(true);
+				break;
+				
+			case 'r':
+				globalOpts.SetRecurse(true);
+				break;
+				
+			case 'f':
+				globalOpts.SetForce(true);
 				break;
 				
 			case 'd':
@@ -61,7 +69,8 @@ int main(int argc, char *argv[])
 	BlueSCSIScan * scan = NULL;
 	
 	command->SetGlobalOpts(globalOpts);
-	if (command->RequiresOneDevice()) {
+	if ((command->RequiresOneDevice()) ||
+		(devicePath != NULL)) {
 		if (devicePath != NULL) {
 			BPath path(devicePath);
 			device = new BlueSCSIDevice(&path, command);

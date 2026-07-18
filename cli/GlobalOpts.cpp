@@ -5,7 +5,9 @@
 
 GlobalOpts::GlobalOpts()
 	: device(NULL),
-	  verbose(false)
+	  verbose(false),
+	  recurse(false),
+	  force(false)
 {
 }
 
@@ -37,4 +39,28 @@ bool GlobalOpts::IsVerbose()
 void GlobalOpts::SetVerbose(bool arg)
 {
 	verbose = arg;
+}
+
+
+bool GlobalOpts::ShouldRecurse()
+{
+	return recurse;
+}
+
+
+void GlobalOpts::SetRecurse(bool arg)
+{
+	recurse = arg;
+}
+
+
+bool GlobalOpts::ShouldForce()
+{
+	return force;
+}
+
+
+void GlobalOpts::SetForce(bool arg)
+{
+	force = arg;
 }

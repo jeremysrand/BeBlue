@@ -16,13 +16,13 @@ WorkingDir::WorkingDir() : Command(),
 
 const char * WorkingDir::Command()
 {
-	return "workingdir";
+	return "working-dir";
 }
 
 
 const char * WorkingDir::Usage()
 {
-	return "workingdir [path]";
+	return "working-dir [path]";
 }
 
 
@@ -40,12 +40,12 @@ bool WorkingDir::ParseArgs(int argc, const char * argv[])
 	}
 	
 	if (argc != 2) {
-		fprintf(stderr, "The %s command takes zero or one argument\n", Command());
+		fprintf(stderr, "ERROR: The %s command takes zero or one argument\n", Command());
 		return false;
 	}
 	
 	if (strlen(argv[1]) >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
-		fprintf(stderr, "The working directory length is longer than the max length of %d\n",
+		fprintf(stderr, "ERROR: The dir length is longer than the max length of %d\n",
 			BLUE_SCSI_MAX_WORKING_DIR_LEN);
 		return false;
 	}
