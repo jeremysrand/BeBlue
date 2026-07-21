@@ -68,8 +68,9 @@ int Get::Execute()
 {
 	BlueSCSIDevice & device = globalOpts->Device();
 	
-	BlueSCSIGet get(device, this);
-	if (!get.SetSrc(src)) {
+	BlueSCSIGet * get = new BlueSCSIGet(device, this);
+	if (!get->SetSrc(src)) {
+		delete get;
 		fprintf(stderr, "ERROR: Unable to parse src %s into dir and filename\n",
 			src);
 		return -1;
@@ -77,20 +78,23 @@ int Get::Execute()
 	
 	BEntry entry;
 	if (dest != NULL) {
-		if (entry.SetTo(dest) != B_NO_ERROR) {
-			fprintf(stderr, "ERROR: Unable to get entry for destination\n");
+		status_t status = entry.SetTo(dest);
+		if (status != B_NO_ERROR) {
+			delete get;
+			HandleGetError("Unable to get entry for destination", status);
 			return -1;
 		}
-		get.SetDest(&entry);
+		get->SetDest(&entry);
 	}
 	
-	get.SetRecurse(globalOpts->ShouldRecurse());
-	get.SetForce(globalOpts->ShouldForce());
+	get->SetRecurse(globalOpts->ShouldRecurse());
+	get->SetForce(globalOpts->ShouldForce());
 	
-	if (!get.Get()) {
+	int result = get->Get() ? 0 : -1;
+	
+	if (result != 0)
 		fprintf(stderr, "ERROR: Get operation failed\n");
-		return -1;
-	}
 	
-	return 0;
+	delete get;
+	return result;
 }

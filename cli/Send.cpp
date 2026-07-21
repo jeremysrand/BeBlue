@@ -1,6 +1,8 @@
 #include "cli/GlobalOpts.h"
 #include "cli/Send.h"
 
+#include "common/BlueSCSISend.h"
+
 
 // Implementation
 
@@ -13,7 +15,7 @@ Send::Send() : Command(),
 
 const char * Send::Command()
 {
-	return "get";
+	return "send";
 }
 
 
@@ -52,14 +54,43 @@ bool Send::ParseArgs(int argc, const char * argv[])
 }
 
 
+void Send::HandleSendError(const char * err, status_t status)
+{
+	fprintf(stderr, "ERROR: %s\n", err);
+	if (status != B_NO_ERROR)
+		fprintf(stderr, "    %s\n", strerror(status));
+}
+
+
 int Send::Execute()
 {
-	printf("src:     %s\n", src);
-	printf("dest:    %s\n", dest != NULL ? dest : "<NONE>");
-	printf("recurse: %s\n", globalOpts->ShouldRecurse() ? "ON" : "OFF");
-	printf("force:   %s\n", globalOpts->ShouldForce() ? "ON" : "OFF");
+	BlueSCSIDevice & device = globalOpts->Device();
 	
-	// TODO - Write this...
+	BEntry entry(src);
+	status_t status = entry.InitCheck();
+	if (status != B_NO_ERROR) {
+		HandleSendError("Unable to get entry for source", status);
+		return -1;
+	}
 	
-	return 0;
+	BlueSCSISend * send = new BlueSCSISend(device, this);
+	
+	send->SetSrc(&entry);
+	send->SetRecurse(globalOpts->ShouldRecurse());
+	if (dest != NULL) {
+		if (!send->SetDest(dest)) {
+			delete send;
+			fprintf(stderr, "ERROR: Unable to parse dest %s into dir and filename\n",
+				dest);
+			return -1;
+		}
+	}
+	
+	int result = send->Send() ? 0 : -1;
+	
+	if (result != 0)
+		fprintf(stderr, "ERROR: Send operation failed\n");
+	
+	delete send;
+	return result;
 }
