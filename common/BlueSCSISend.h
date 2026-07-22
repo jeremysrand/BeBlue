@@ -25,7 +25,7 @@ class BlueSCSISend {
 		
 		
 		void SetSrc(BEntry * arg);
-		void SetRecurse(bool arg);
+		bool SetRecurse(bool arg);
 		bool SetDest(const char * arg);
 		
 		bool Send();
@@ -33,6 +33,12 @@ class BlueSCSISend {
 	private:
 		status_t RaiseError(const char * err, status_t status);
 		void HandleSendError(const char * err, status_t status = B_NO_ERROR);
+		
+		bool SendToRightDir();
+		bool SendFile(BEntry * entry, bool useExistingFilename = false);
+		bool SendDir(BEntry * entry, bool useExistingFilename = false);
+		
+		bool SetFilenameFromEntry(BEntry * entry, bool useExistingFilename);
 		
 	private:
 		BlueSCSIDevice & device;

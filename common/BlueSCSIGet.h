@@ -26,7 +26,7 @@ class BlueSCSIGet {
 		~BlueSCSIGet();
 		
 		bool SetSrc(const char * src);
-		void SetRecurse(bool arg);
+		bool SetRecurse(bool arg);
 		void SetForce(bool arg);
 		void SetDest(BEntry * arg);
 		

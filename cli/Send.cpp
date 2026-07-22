@@ -76,7 +76,11 @@ int Send::Execute()
 	BlueSCSISend * send = new BlueSCSISend(device, this);
 	
 	send->SetSrc(&entry);
-	send->SetRecurse(globalOpts->ShouldRecurse());
+	if (!send->SetRecurse(globalOpts->ShouldRecurse())) {
+		delete send;
+		fprintf(stderr, "ERROR: Unable to set recurse mode\n");
+		return -1;
+	}
 	if (dest != NULL) {
 		if (!send->SetDest(dest)) {
 			delete send;

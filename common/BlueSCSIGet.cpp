@@ -42,9 +42,14 @@ bool BlueSCSIGet::SetSrc(const char * src)
 }
 
 
-void BlueSCSIGet::SetRecurse(bool arg)
+bool BlueSCSIGet::SetRecurse(bool arg)
 {
+	if ((arg) && (!device.SupportsSetWorkingDir())) {
+		HandleGetError("Cannot enable recurse because the BlueSCSI does not support changing the working dir");
+		return false;
+	}
 	recurse = arg;
+	return true;
 }
 
 

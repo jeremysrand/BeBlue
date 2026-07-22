@@ -87,7 +87,11 @@ int Get::Execute()
 		get->SetDest(&entry);
 	}
 	
-	get->SetRecurse(globalOpts->ShouldRecurse());
+	if (!get->SetRecurse(globalOpts->ShouldRecurse())) {
+		delete get;
+		fprintf(stderr, "ERROR: Unable to set recurse mode\n");
+		return -1;
+	}
 	get->SetForce(globalOpts->ShouldForce());
 	
 	int result = get->Get() ? 0 : -1;
