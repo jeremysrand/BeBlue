@@ -84,24 +84,24 @@ status_t BlueSCSIGet::RaiseError(const char * err, status_t status)
 bool BlueSCSIGet::Get()
 {
 	char cwd[BLUE_SCSI_MAX_WORKING_DIR_LEN];
-	if (dir[0] != '\0') {
-		if (!comm.GetWorkingDir(cwd, sizeof(cwd))) {
-			HandleGetError("Unable to get current working directory");
-			return false;
-		}
-		if (!comm.SetWorkingDir(dir, sizeof(dir))) {
-			HandleGetError("Unable to change current working directory");
-			return false;
-		}
+	if ((device.SupportsSetWorkingDir()) &&
+		(!comm.GetWorkingDir(cwd, sizeof(cwd)))) {
+		HandleGetError("Unable to get current working directory");
+		return false;
+	}
+	
+	if ((dir[0] != '\0') &&
+		(!comm.SetWorkingDir(dir, sizeof(dir)))) {
+		HandleGetError("Unable to change current working directory");
+		return false;
 	}
 	
 	bool result = GetFromRightDir();
 	
-	if (dir[0] != '\0') {
-		if (!comm.SetWorkingDir(cwd, sizeof(cwd))) {
-			HandleGetError("Unable to restore current working directory");
-			return false;
-		}
+	if ((device.SupportsSetWorkingDir()) &&
+		(!comm.SetWorkingDir(cwd, sizeof(cwd)))) {
+		HandleGetError("Unable to restore current working directory");
+		return false;
 	}
 	
 	return result;

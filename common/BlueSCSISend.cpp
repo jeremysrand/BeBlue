@@ -82,24 +82,23 @@ bool BlueSCSISend::Send()
 		return false;
 	}
 	
-	if (dir[0] != '\0') {
-		if (!comm.GetWorkingDir(cwd, sizeof(cwd))) {
-			HandleSendError("Unable to get current working directory");
-			return false;
-		}
-		if (!comm.SetWorkingDir(dir, sizeof(dir))) {
-			HandleSendError("Unable to change current working directory");
-			return false;
-		}
+	if ((device.SupportsSetWorkingDir()) &&
+		(!comm.GetWorkingDir(cwd, sizeof(cwd)))) {
+		HandleSendError("Unable to get current working directory");
+		return false;
+	}
+	if ((dir[0] != '\0') &&
+		(!comm.SetWorkingDir(dir, sizeof(dir)))) {
+		HandleSendError("Unable to change current working directory");
+		return false;
 	}
 	
 	bool result = SendToRightDir();
 	
-	if (dir[0] != '\0') {
-		if (!comm.SetWorkingDir(cwd, sizeof(cwd))) {
-			HandleSendError("Unable to restore current working directory");
-			return false;
-		}
+	if ((device.SupportsSetWorkingDir()) &&
+	    (!comm.SetWorkingDir(cwd, sizeof(cwd)))) {
+		HandleSendError("Unable to restore current working directory");
+		return false;
 	}
 	
 	return result;
@@ -216,6 +215,16 @@ bool BlueSCSISend::SendDir(BEntry * entry, bool useExistingFilename)
 {
 	if (!SetFilenameFromEntry(src, useExistingFilename))
 		return false;
+	
+	uint32 oldDirLen = strlen(dir); 	
+	if (oldDirLen + strlen(filename) + 1 >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
+		HandleSendError("Target path length is too long for the BlueSCSI");
+		return false;
+	}
+	
+	dir[oldDirLen] = '/';
+	strcpy(&(dir[oldDirLen + 1]), filename);
+	
 	
 	HandleSendError("TODO - Write this code...");
 	return false;
