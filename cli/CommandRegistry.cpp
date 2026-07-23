@@ -2,6 +2,7 @@
 
 #include "cli/Capabilities.h"
 #include "cli/CommandRegistry.h"
+#include "cli/CDs.h"
 #include "cli/Debug.h"
 #include "cli/Devices.h"
 #include "cli/Files.h"
@@ -9,6 +10,10 @@
 #include "cli/Inquiry.h"
 #include "cli/Scan.h"
 #include "cli/Send.h"
+#include "cli/SetCD.h"
+#include "cli/WifiInfo.h"
+#include "cli/WifiJoin.h"
+#include "cli/WifiScan.h"
 #include "cli/WorkingDir.h"
 
 
@@ -25,7 +30,12 @@ CommandRegistry::CommandRegistry()
 	commands.AddItem(new WorkingDir());
 	commands.AddItem(new Files());
 	commands.AddItem(new Get());
-	commands.AddItem(new Send());	
+	commands.AddItem(new Send());
+	commands.AddItem(new CDs());
+	commands.AddItem(new SetCD());
+	commands.AddItem(new WifiScan());
+	commands.AddItem(new WifiJoin());
+	commands.AddItem(new WifiInfo());
 }
 
 
