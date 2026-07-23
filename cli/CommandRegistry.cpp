@@ -9,7 +9,6 @@
 #include "cli/Inquiry.h"
 #include "cli/Scan.h"
 #include "cli/Send.h"
-#include "cli/Testing.h"
 #include "cli/WorkingDir.h"
 
 
@@ -26,8 +25,7 @@ CommandRegistry::CommandRegistry()
 	commands.AddItem(new WorkingDir());
 	commands.AddItem(new Files());
 	commands.AddItem(new Get());
-	commands.AddItem(new Send());
-	commands.AddItem(new Testing());	
+	commands.AddItem(new Send());	
 }
 
 
