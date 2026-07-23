@@ -112,7 +112,7 @@ bool BlueSCSISend::SetFilenameFromEntry(BEntry * entry, bool useExistingFilename
 		return true;
 		
 	if (RaiseError("Unable to get filename of source entry",
-		src->GetName(beFilename)) != B_NO_ERROR)
+		entry->GetName(beFilename)) != B_NO_ERROR)
 		return false;
 		
 	if (strlen(beFilename) > BLUE_SCSI_MAX_FILE_NAME_LEN) {
@@ -145,7 +145,7 @@ bool BlueSCSISend::SendToRightDir()
 
 bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 {
-	if (!SetFilenameFromEntry(src, useExistingFilename))
+	if (!SetFilenameFromEntry(entry, useExistingFilename))
 		return false;
 	
 	BFile file(entry, B_READ_ONLY);
@@ -211,9 +211,9 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 }
 
 
-bool BlueSCSISend::SendDir(BEntry * entry, bool useExistingFilename)
+bool BlueSCSISend::SendDir(BEntry * dirEntry, bool useExistingFilename)
 {
-	if (!SetFilenameFromEntry(src, useExistingFilename))
+	if (!SetFilenameFromEntry(dirEntry, useExistingFilename))
 		return false;
 	
 	uint32 oldDirLen = strlen(dir); 	
@@ -225,9 +225,41 @@ bool BlueSCSISend::SendDir(BEntry * entry, bool useExistingFilename)
 	dir[oldDirLen] = '/';
 	strcpy(&(dir[oldDirLen + 1]), filename);
 	
+	if (!comm.SetWorkingDir(dir, sizeof(dir))) {
+		HandleSendError("Unable to create target directory");
+		return false;
+	}
 	
-	HandleSendError("TODO - Write this code...");
-	return false;
+	BDirectory srcDir(dirEntry);
+	if (RaiseError("Unable to open source directory",
+		srcDir.InitCheck()) != B_NO_ERROR)
+		return false;
+	
+	BEntry entry;
+	status_t status;
+	while ((status = srcDir.GetNextEntry(&entry)) == B_NO_ERROR)
+		if ((entry.IsFile()) &&
+			(!SendFile(&entry)))
+			return false;
+	
+	if (status != B_ENTRY_NOT_FOUND) {
+		RaiseError("Unable to walk source directory", status);
+		return false;
+	}
+	
+	srcDir.Rewind();
+	while ((status = srcDir.GetNextEntry(&entry)) == B_NO_ERROR)
+		if ((entry.IsDirectory()) &&
+			(!SendDir(&entry)))
+			return false;
+	
+	if (status != B_ENTRY_NOT_FOUND) {
+		RaiseError("Unable to walk source directory", status);
+		return false;
+	}
+	
+	dir[oldDirLen] = '\0';
+	return true;
 }
 
 
