@@ -130,8 +130,13 @@ bool BlueSCSISend::SendToRightDir()
 	if (src->IsFile())
 		return SendFile(src, true);
 		
-	if (src->IsDirectory())
+	if (src->IsDirectory()) {
+		if (!recurse) {
+			HandleSendError("Source is a directory but recurse has not been set");
+			return false;
+		}
 		return SendDir(src, true);
+	}
 		
 	if (src->IsSymLink()) {
 		HandleSendError("Cannot send symbolic links to the BlueSCSI");
@@ -154,6 +159,7 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 		return false;
 	
 	if (!comm.PrepareToSendFile(filename)) {
+		fprintf(stderr, "filename = \"%s\"\n", filename);
 		HandleSendError("Unable to open target file for writing");
 		return false;
 	}

@@ -259,6 +259,7 @@ bool BlueSCSICommand::PrepareToSendFile(const char * filename)
 			(uint32)BLUE_SCSI_FILE_NAME_MAX_LEN, (uint32)strlen(filename)));
 		return false;
 	}
+	strcpy(buffer, filename);
 	uint8 command[] = { BLUE_SCSI_SEND_FILE_PREP, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	return ExecuteCommand(command, sizeof(command), buffer, sizeof(buffer));
 }
