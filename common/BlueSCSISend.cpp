@@ -16,6 +16,7 @@ BlueSCSISend::BlueSCSISend(BlueSCSIDevice & deviceArg, BlueSCSISendErrorHandler 
 	bufferSize(0),
 	errHandler(errHandlerArg)
 {
+	memset(cwd, 0, sizeof(cwd));
 	memset(dir, 0, sizeof(dir));
 	memset(filename, 0, sizeof(filename));
 	memset(beFilename, 0, sizeof(beFilename));
@@ -53,7 +54,7 @@ bool BlueSCSISend::SetRecurse(bool arg)
 
 bool BlueSCSISend::SetDest(const char * dest)
 {
-	return device.SplitPath(dest, dir, filename);
+	return device.ParsePath(dest, cwd, dir, filename);
 }
 
 
@@ -75,18 +76,11 @@ status_t BlueSCSISend::RaiseError(const char * err, status_t status)
 
 bool BlueSCSISend::Send()
 {
-	char cwd[BLUE_SCSI_MAX_WORKING_DIR_LEN];
-	
 	if (!src->Exists()) {
 		HandleSendError("Source entry does not exist");
 		return false;
 	}
-	
-	if ((device.SupportsSetWorkingDir()) &&
-		(!comm.GetWorkingDir(cwd, sizeof(cwd)))) {
-		HandleSendError("Unable to get current working directory");
-		return false;
-	}
+
 	if ((dir[0] != '\0') &&
 		(!comm.SetWorkingDir(dir, sizeof(dir)))) {
 		HandleSendError("Unable to change current working directory");

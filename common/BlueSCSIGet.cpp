@@ -18,6 +18,7 @@ BlueSCSIGet::BlueSCSIGet(BlueSCSIDevice & deviceArg, BlueSCSIGetErrorHandler * e
 	bufferSize(0),
 	errHandler(errHandlerArg)
 {
+	memset(cwd, 0, sizeof(cwd));
 	memset(dir, 0, sizeof(dir));
 	memset(filename, 0, sizeof(filename));
 	memset(beFilename, 0, sizeof(beFilename));
@@ -38,7 +39,7 @@ BlueSCSIGet::~BlueSCSIGet()
 
 bool BlueSCSIGet::SetSrc(const char * src)
 {
-	return device.SplitPath(src, dir, filename);
+	return device.ParsePath(src, cwd, dir, filename);
 }
 
 
@@ -83,13 +84,6 @@ status_t BlueSCSIGet::RaiseError(const char * err, status_t status)
 
 bool BlueSCSIGet::Get()
 {
-	char cwd[BLUE_SCSI_MAX_WORKING_DIR_LEN];
-	if ((device.SupportsSetWorkingDir()) &&
-		(!comm.GetWorkingDir(cwd, sizeof(cwd)))) {
-		HandleGetError("Unable to get current working directory");
-		return false;
-	}
-	
 	if ((dir[0] != '\0') &&
 		(!comm.SetWorkingDir(dir, sizeof(dir)))) {
 		HandleGetError("Unable to change current working directory");

@@ -54,8 +54,8 @@
 
 // Implementation
 
-BlueSCSICommand::BlueSCSICommand(BPath * path)
-	: SCSICommand(path)
+BlueSCSICommand::BlueSCSICommand(BPath * path, Logger * logger)
+	: SCSICommand(path, logger)
 {
 }
 

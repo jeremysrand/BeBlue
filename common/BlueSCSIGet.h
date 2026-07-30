@@ -47,6 +47,7 @@ class BlueSCSIGet {
 		BlueSCSIDevice & device;
 		BlueSCSICommand & comm;
 		
+		char cwd[BLUE_SCSI_MAX_WORKING_DIR_LEN];
 		char dir[BLUE_SCSI_MAX_WORKING_DIR_LEN];
 		char filename[BLUE_SCSI_MAX_FILE_NAME_LEN + 1];
 		char beFilename[B_FILE_NAME_LENGTH];

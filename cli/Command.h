@@ -6,6 +6,7 @@
 // Forward declarations;
 
 class GlobalOpts;
+class Logger;
 
 
 // Interface
@@ -26,6 +27,7 @@ class Command : public BlueSCSIDeviceErrorHandler
 		void VerboseErrorf(const char * format, ...);
 		
 		virtual void HandleError(BPath * path, const char * err);
+		virtual Logger * GetLogger();
 		
 	protected:
 		GlobalOpts * globalOpts;

@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "cli/Command.h"
+#include "cli/FileLogger.h"
 #include "cli/GlobalOpts.h"
 
 
@@ -47,4 +48,13 @@ void Command::VerboseErrorf(const char * format, ...)
 void Command::HandleError(BPath * path, const char * err)
 {
 	VerboseErrorf("ERROR: device = %s: %s\n", path->Path(), err);
+}
+
+
+Logger * Command::GetLogger()
+{
+	if (globalOpts == NULL)
+		return NULL;
+		
+	return globalOpts->Logger();
 }

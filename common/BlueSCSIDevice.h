@@ -8,9 +8,12 @@
 
 // Interface
 
+class Logger;
+
 class BlueSCSIDeviceErrorHandler {
 	public:
 		virtual void HandleError(BPath * path, const char * err) = 0;
+		virtual Logger * GetLogger() = 0;
 };
 
 class BlueSCSIDevice
@@ -38,7 +41,7 @@ class BlueSCSIDevice
 		
 		void SetErrorHandler(BlueSCSIDeviceErrorHandler * errHandlerArg);
 		
-		bool SplitPath(const char * path, char * dir, char * filename);
+		bool ParsePath(const char * path, char * cwd, char * dir, char * filename);
 
 		void HandleError(const char * err);
 		

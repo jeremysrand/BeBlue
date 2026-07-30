@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	GlobalOpts globalOpts;
 	CommandRegistry registry;
 	
-	while ((c = getopt(argc, argv, "hvrfd:")) != EOF) {
+	while ((c = getopt(argc, argv, "hvrfd:l:")) != EOF) {
 		switch (c) {
 			case 'h':
 			case '?':
@@ -50,6 +50,10 @@ int main(int argc, char *argv[])
 				
 			case 'd':
 				devicePath = optarg;
+				break;
+				
+			case 'l':
+				globalOpts.AddFileLogger(optarg);
 				break;
 		}
 	}

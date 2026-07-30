@@ -86,7 +86,7 @@ struct BlueSCSINetworkJoinRequest {
 
 class BlueSCSICommand : public SCSICommand {
 	public:
-		BlueSCSICommand(BPath * path);
+		BlueSCSICommand(BPath * path, Logger * logger = NULL);
 		~BlueSCSICommand();
 		
 		bool IsBlueSCSIInquiry(SCSIInquiryResult * result);

@@ -18,7 +18,7 @@ BlueSCSIDevice::BlueSCSIDevice(BPath * pathArg, BlueSCSIDeviceErrorHandler * err
 	  target(0),
 	  lun(0),
 	  path(pathArg->Path(), NULL, true),
-	  comm(&path),
+	  comm(&path, (errHandlerArg != NULL ? errHandlerArg->GetLogger() : NULL)),
 	  inquiry(),
 	  capabilities(),
 	  errHandler(errHandlerArg)
@@ -106,6 +106,8 @@ void BlueSCSIDevice::HandleError(const char * err)
 void BlueSCSIDevice::SetErrorHandler(BlueSCSIDeviceErrorHandler * errHandlerArg)
 {
 	errHandler = errHandlerArg;
+	if (errHandlerArg != NULL)
+		comm.SetLogger(errHandlerArg->GetLogger());
 }
 
 
@@ -157,7 +159,7 @@ bool BlueSCSIDevice::SupportsSetWorkingDir()
 }
 
 
-bool BlueSCSIDevice::SplitPath(const char * path, char * dir, char * filename)
+bool BlueSCSIDevice::ParsePath(const char * path, char * cwd, char * dir, char * filename)
 {
 	size_t pathLen = strlen(path);
 	
@@ -190,17 +192,18 @@ bool BlueSCSIDevice::SplitPath(const char * path, char * dir, char * filename)
 	if (lastSlashIndex == -1) {
 		// No directory in the path so it is a file in the cwd.
 		dir[0] = '\0';
-		return true;
-	}
-	
-	if (!SupportsSetWorkingDir()) {
+	} else if (!SupportsSetWorkingDir()) {
 		HandleError("Path contains at least one directory but setting cwd is not supported");
 		return false;
 	}
 	
-	char cwd[BLUE_SCSI_MAX_WORKING_DIR_LEN];
-	if (!comm.GetWorkingDir(cwd, sizeof(cwd)))
+	if (!comm.GetWorkingDir(cwd, BLUE_SCSI_MAX_WORKING_DIR_LEN))
 		return false;
+		
+	if (lastSlashIndex == -1) {
+		strcpy(dir, cwd);
+		return true;
+	}
 	
 	if (path[0] == '/') {
 		if (lastSlashIndex >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
@@ -229,7 +232,5 @@ bool BlueSCSIDevice::SplitPath(const char * path, char * dir, char * filename)
 		*ptr = '\0';
 	}
 	
-	if (strcmp(cwd, dir) == 0)
-		dir[0] = '\0';
 	return true;
 }

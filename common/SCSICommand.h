@@ -1,5 +1,8 @@
 #include <Path.h>
 
+#include "common/Logger.h"
+
+
 #ifndef SCSI_COMMAND_H
 #define SCSI_COMMAND_H
 
@@ -30,8 +33,10 @@ struct SCSIInquiryResult {
 
 class SCSICommand {
 	public:
-		SCSICommand(BPath * path);
+		SCSICommand(BPath * path, Logger * logger = NULL);
 		~SCSICommand();
+		
+		void SetLogger(Logger * logger);
 	
 		bool HasError();
 		const char * GetErrorStr();
@@ -47,12 +52,17 @@ class SCSICommand {
 		void RaiseError(const char * str, int errnum);
 		
 		const char * FormatError(const char * fmt, ...);
+		
+		void Log(const char * fmt, ...);
+		
+	private:
+		void LogCommand(uint8 * command, uint8 commandLen, size_t dataLen);
 
 	private:
 		int fd;
 		uint8 sense[SCSI_SENSE_SIZE];
 		char * errorStr;		
-		
+		Logger * logger;
 };
 
 #endif

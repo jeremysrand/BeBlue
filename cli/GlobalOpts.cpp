@@ -1,3 +1,4 @@
+#include "cli/FileLogger.h"
 #include "cli/GlobalOpts.h"
 
 
@@ -5,10 +6,18 @@
 
 GlobalOpts::GlobalOpts()
 	: device(NULL),
+	  logger(NULL),
 	  verbose(false),
 	  recurse(false),
 	  force(false)
 {
+}
+
+
+GlobalOpts::~GlobalOpts()
+{
+	if (logger != NULL)
+		delete logger;
 }
 
 
@@ -63,4 +72,18 @@ bool GlobalOpts::ShouldForce()
 void GlobalOpts::SetForce(bool arg)
 {
 	force = arg;
+}
+
+
+FileLogger * GlobalOpts::Logger()
+{
+	return logger;
+}
+
+
+void GlobalOpts::AddFileLogger(const char * path)
+{
+	if (logger != NULL)
+		delete logger;
+	logger = new FileLogger(path);
 }

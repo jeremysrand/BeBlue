@@ -5,6 +5,7 @@
 // Forward declarations
 
 class BlueSCSIDevice;
+class FileLogger;
 
 
 // Interface
@@ -12,6 +13,7 @@ class BlueSCSIDevice;
 class GlobalOpts {
 	public:
 		GlobalOpts();
+		~GlobalOpts();
 		
 		bool HasDevice();
 		BlueSCSIDevice & Device();
@@ -25,9 +27,13 @@ class GlobalOpts {
 		
 		bool ShouldForce();
 		void SetForce(bool arg);
+		
+		FileLogger * Logger();
+		void AddFileLogger(const char * path);
 	
 	private:
 		BlueSCSIDevice * device;
+		FileLogger * logger;
 		bool verbose;
 		bool recurse;
 		bool force;
