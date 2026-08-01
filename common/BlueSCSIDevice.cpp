@@ -18,12 +18,19 @@ BlueSCSIDevice::BlueSCSIDevice(BPath * pathArg, BlueSCSIDeviceErrorHandler * err
 	  target(0),
 	  lun(0),
 	  path(pathArg->Path(), NULL, true),
-	  comm(&path, (errHandlerArg != NULL ? errHandlerArg->GetLogger() : NULL)),
+	  logger(errHandlerArg != NULL ? errHandlerArg->GetLogger() : NULL),
+	  comm(&path, logger),
 	  inquiry(),
 	  capabilities(),
 	  errHandler(errHandlerArg)
 {
 	Init();
+	if (IsLogging()) {
+		Log("Device at %s is%s a BlueSCSI", PathString(), (IsBlueSCSI() ? "" : " not"));
+		Log("  Bus    = %d", Bus());
+		Log("  Target = %d", Target());
+		Log("  LUN    = %d", Lun());
+	}
 }
 
 
@@ -100,6 +107,7 @@ void BlueSCSIDevice::HandleError(const char * err)
 {
 	if (errHandler != NULL)
 		errHandler->HandleError(&path, err);
+	Log("ERROR: %s", err);
 }
 
 
@@ -108,6 +116,28 @@ void BlueSCSIDevice::SetErrorHandler(BlueSCSIDeviceErrorHandler * errHandlerArg)
 	errHandler = errHandlerArg;
 	if (errHandlerArg != NULL)
 		comm.SetLogger(errHandlerArg->GetLogger());
+}
+
+
+void BlueSCSIDevice::Log(const char * fmt, ...)
+{
+	if (!IsLogging())
+		return;
+	
+	char timestamp[LOGGER_TIMESTAMP_LEN];
+	logger->FormatTimestamp(timestamp);
+	
+	va_list args;
+	
+	va_start(args, fmt);
+	logger->Log(timestamp, fmt, args);
+	va_end(args);
+}
+
+
+bool BlueSCSIDevice::IsLogging()
+{
+	return (logger != NULL);
 }
 
 
@@ -161,6 +191,7 @@ bool BlueSCSIDevice::SupportsSetWorkingDir()
 
 bool BlueSCSIDevice::ParsePath(const char * path, char * cwd, char * dir, char * filename)
 {
+	Log("Parsing path \"%s\"", path);
 	size_t pathLen = strlen(path);
 	
 	if (pathLen == 0) {
@@ -189,48 +220,54 @@ bool BlueSCSIDevice::ParsePath(const char * path, char * cwd, char * dir, char *
 	
 	strcpy(filename, &(path[startOfFilename]));
 	
+	if (SupportsSetWorkingDir()) {
+		if (!comm.GetWorkingDir(cwd, BLUE_SCSI_MAX_WORKING_DIR_LEN))
+			return false;
+	} else
+		cwd[0] = '\0';
+	
 	if (lastSlashIndex == -1) {
 		// No directory in the path so it is a file in the cwd.
-		dir[0] = '\0';
-	} else if (!SupportsSetWorkingDir()) {
-		HandleError("Path contains at least one directory but setting cwd is not supported");
-		return false;
-	}
-	
-	if (!comm.GetWorkingDir(cwd, BLUE_SCSI_MAX_WORKING_DIR_LEN))
-		return false;
-		
-	if (lastSlashIndex == -1) {
 		strcpy(dir, cwd);
-		return true;
-	}
-	
-	if (path[0] == '/') {
-		if (lastSlashIndex >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
-			HandleError("The directory portion of the path is too long");
-			return false;
-		}
-		if (lastSlashIndex == 0)
-			lastSlashIndex++;
-		memcpy(dir, path, lastSlashIndex);
-		dir[lastSlashIndex] = '\0';
 	} else {
-		size_t cwdLen = strlen(cwd);
-		if (cwdLen + lastSlashIndex + 1 >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
-			HandleError("The directory portion of the path is too long");
+		if (!SupportsSetWorkingDir()) {
+			HandleError("Path contains at least one directory but setting cwd is not supported");
 			return false;
 		}
-		strcpy(dir, cwd);
-		char * ptr = &(dir[cwdLen - 1]);
-		if (*ptr != '/')
+		if (path[0] == '/') {
+			if (lastSlashIndex >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
+				HandleError("The directory portion of the path is too long");
+				return false;
+			}
+			if (lastSlashIndex == 0)
+				lastSlashIndex++;
+			memcpy(dir, path, lastSlashIndex);
+			dir[lastSlashIndex] = '\0';
+		} else {
+			size_t cwdLen = strlen(cwd);
+			if (cwdLen + lastSlashIndex + 1 >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
+				HandleError("The directory portion of the path is too long");
+				return false;
+			}
+			strcpy(dir, cwd);
+			char * ptr = &(dir[cwdLen - 1]);
+			if (*ptr != '/')
+				ptr++;
+			*ptr = '/';
 			ptr++;
-		*ptr = '/';
-		ptr++;
-		
-		memcpy(ptr, path, lastSlashIndex);
-		ptr += lastSlashIndex;
-		*ptr = '\0';
+			
+			memcpy(ptr, path, lastSlashIndex);
+			ptr += lastSlashIndex;
+			*ptr = '\0';
+		}
 	}
+	
+	if (IsLogging()) {
+		Log("Parsed path \"%s\"", path);
+		Log("  cwd      = \"%s\"", cwd);
+		Log("  dir      = \"%s\"", dir);
+		Log("  filename = \"%s\"", filename);
+	}	
 	
 	return true;
 }

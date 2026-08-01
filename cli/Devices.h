@@ -15,9 +15,6 @@ class Devices : public Command {
 		virtual bool RequiresOneDevice();
 		virtual bool ParseArgs(int argc, const char * argv[]);
 		virtual int Execute();
-		
-	private:
-		const char * DeviceStr(uint32 devNumber);
 };
 
 

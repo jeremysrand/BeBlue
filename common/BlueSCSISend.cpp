@@ -62,6 +62,11 @@ void BlueSCSISend::HandleSendError(const char * err, status_t status)
 {
 	if (errHandler != NULL)
 		errHandler->HandleSendError(err, status);
+	
+	if (status == B_NO_ERROR)
+		device.Log("ERROR: %s", err);
+	else
+		device.Log("ERROR: %s, %s (%d)", err, strerror(status), status);
 }
 
 
@@ -76,6 +81,21 @@ status_t BlueSCSISend::RaiseError(const char * err, status_t status)
 
 bool BlueSCSISend::Send()
 {
+	if (device.IsLogging()) {
+		BPath path;
+		
+		device.Log("Starting to send file(s) to the BlueSCSI");
+		if (src->GetPath(&path) == B_NO_ERROR)
+			device.Log("  src           = \"%s\"", path.Path());
+		else
+			device.Log("  src           = <ERROR>");
+		device.Log("  cwd           = \"%s\"", cwd);
+		device.Log("  dest dir      = \"%s\"", dir);
+		device.Log("  dest filename = \"%s\"", filename);
+		device.Log("  recurse       = %s", recurse ? "ON" : "OFF");
+		device.Log("  supportsBulk  = %s", supportsBulk ? "YES" : "NO");
+	}
+	
 	if (!src->Exists()) {
 		HandleSendError("Source entry does not exist");
 		return false;
@@ -85,6 +105,13 @@ bool BlueSCSISend::Send()
 		(!comm.SetWorkingDir(dir, sizeof(dir)))) {
 		HandleSendError("Unable to change current working directory");
 		return false;
+	} else {
+		if ((device.SupportsSetWorkingDir()) &&
+			(!comm.GetWorkingDir(cwd, sizeof(cwd)))) {
+			HandleSendError("Unable to get current working directory");
+			return false;
+		}
+		strcpy(dir, cwd);
 	}
 	
 	bool result = SendToRightDir();
@@ -115,6 +142,7 @@ bool BlueSCSISend::SetFilenameFromEntry(BEntry * entry, bool useExistingFilename
 	}
 	
 	strcpy(filename, beFilename);
+	device.Log("Set target filename to \"%s\"", filename);
 	return true;
 }
 
@@ -147,6 +175,7 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 	if (!SetFilenameFromEntry(entry, useExistingFilename))
 		return false;
 	
+	device.Log("Send file \"%s\" to the BlueSCSI", beFilename);
 	BFile file(entry, B_READ_ONLY);
 	if (RaiseError("Unable to open source file for reading",
 		file.InitCheck()) != B_NO_ERROR)
@@ -161,6 +190,7 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 	bool result = true;
 	uint32 blockOffset = 0;
 	while (true) {
+		device.Log("Try to read %lu bytes from the file", bufferSize);
 		ssize_t readSize = file.Read(buffer, bufferSize);
 		if (readSize == 0)
 			break;
@@ -171,7 +201,9 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 			break;
 		}
 		
+		device.Log("Read %ld bytes from the file", readSize);
 		if (!supportsBulk) {
+			device.Log("Write %ld non-bulk bytes to the file", readSize);
 			if (!comm.SendFileBytes(blockOffset, buffer, readSize)) {
 				result = false;
 				HandleSendError("Error writing to target file");
@@ -183,6 +215,7 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 			size_t blockBufferSize = blocksToWrite * BLUE_SCSI_SEND_FILE_BLOCK_SIZE;
 			
 			if (blocksToWrite > 0) {
+				device.Log("Write %lu bulk bytes to the file", blockBufferSize);
 				if (!comm.SendFileBulk(blockOffset, buffer, blockBufferSize)) {
 					result = false;
 					HandleSendError("Error writing bulk data to target file");
@@ -191,6 +224,7 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 			}
 			
 			if (bytesToWrite > 0) {
+				device.Log("Write %u non-bulk bytes to the file", bytesToWrite);
 				if (!comm.SendFileBytes(blockOffset, &(buffer[blockBufferSize]), bytesToWrite)) {
 					result = false;
 					HandleSendError("Error writing to target file");
@@ -207,6 +241,8 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 		HandleSendError("Unable to close the target file on the BlueSCSI");
 		return false;
 	}
+	
+	device.Log("File send complete, %s", (result ? "SUCCESS" : "FAILED"));
 	return result;
 }
 
@@ -216,6 +252,9 @@ bool BlueSCSISend::SendDir(BEntry * dirEntry, bool useExistingFilename)
 	if (!SetFilenameFromEntry(dirEntry, useExistingFilename))
 		return false;
 	
+	device.Log("Send directory \"%s\" to the BlueSCSI", beFilename);
+	device.Log("Must add the dest filename to the dest directory");
+	device.Log("  dest dir is currently \"%s\"", dir);
 	uint32 oldDirLen = strlen(dir); 	
 	if (oldDirLen + strlen(filename) + 1 >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
 		HandleSendError("Target path length is too long for the BlueSCSI");
@@ -224,12 +263,14 @@ bool BlueSCSISend::SendDir(BEntry * dirEntry, bool useExistingFilename)
 	
 	dir[oldDirLen] = '/';
 	strcpy(&(dir[oldDirLen + 1]), filename);
+	device.Log("  dest dir is now \"%s\"", dir);
 	
 	if (!comm.SetWorkingDir(dir, sizeof(dir))) {
 		HandleSendError("Unable to create target directory");
 		return false;
 	}
 	
+	device.Log("Open source directory to iterate over entries");
 	BDirectory srcDir(dirEntry);
 	if (RaiseError("Unable to open source directory",
 		srcDir.InitCheck()) != B_NO_ERROR)
@@ -237,6 +278,7 @@ bool BlueSCSISend::SendDir(BEntry * dirEntry, bool useExistingFilename)
 	
 	BEntry entry;
 	status_t status;
+	device.Log("Copy files in the source directory to the BlueSCSI");
 	while ((status = srcDir.GetNextEntry(&entry)) == B_NO_ERROR)
 		if ((entry.IsFile()) &&
 			(!SendFile(&entry)))
@@ -248,6 +290,7 @@ bool BlueSCSISend::SendDir(BEntry * dirEntry, bool useExistingFilename)
 	}
 	
 	srcDir.Rewind();
+	device.Log("Copy sirectories in the source directory to the BlueSCSI");
 	while ((status = srcDir.GetNextEntry(&entry)) == B_NO_ERROR)
 		if ((entry.IsDirectory()) &&
 			(!SendDir(&entry)))
@@ -259,6 +302,9 @@ bool BlueSCSISend::SendDir(BEntry * dirEntry, bool useExistingFilename)
 	}
 	
 	dir[oldDirLen] = '\0';
+	device.Log("Reset source dir back to \"%s\"", dir);
+	
+	device.Log("Directory send complete, SUCCESS");
 	return true;
 }
 

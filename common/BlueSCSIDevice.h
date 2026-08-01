@@ -45,6 +45,9 @@ class BlueSCSIDevice
 
 		void HandleError(const char * err);
 		
+		void Log(const char * fmt, ...);
+		bool IsLogging();
+		
 	private:
 		void Init();
 
@@ -54,6 +57,7 @@ class BlueSCSIDevice
 		int32 target;
 		int32 lun;
 		BPath path;
+		Logger * logger;
 		BlueSCSICommand comm;
 		SCSIInquiryResult inquiry;
 		BlueSCSICapResult capabilities;

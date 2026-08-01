@@ -99,6 +99,7 @@ class BlueSCSICommand : public SCSICommand {
 		bool SupportsSetWorkingDir(const BlueSCSICapResult & result);
 		
 		bool ListDevices(BlueSCSIListDevsResult * result);
+		const char * DeviceStr(uint8 devNumber);
 		
 		bool GetDebug(BlueSCSIDebugResult *result);
 		bool SetDebug(bool enabled);
@@ -110,6 +111,7 @@ class BlueSCSICommand : public SCSICommand {
 		bool ListFiles(BlueSCSIFileEntry * fileEntries, uint8 maxEntries);
 		uint64 GetFileSize(const BlueSCSIFileEntry & fileEntry);
 		uint32 GetFileNumBlocks(const BlueSCSIFileEntry & fileEntry);
+		const char * FileTypeStr(uint8 type);
 		
 		bool GetFile(uint8 fileIndex, uint32 blockOffset, char * buffer,
 			size_t bufferSize);

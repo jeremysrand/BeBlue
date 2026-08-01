@@ -125,24 +125,11 @@ int Files::ListFiles(const char * path)
 	
 	for (int i = 0; i < numFiles; i++) {
 		printf("| %-6u| %-5s| %-14Lu| %-33s|\n", (uint32)fileEntries[i].index,
-			FileTypeStr(fileEntries[i].type), comm.GetFileSize(fileEntries[i]),
+			comm.FileTypeStr(fileEntries[i].type), comm.GetFileSize(fileEntries[i]),
 			fileEntries[i].name);
 	}
 	printf("+-----------------------------------------------------------------+\n");
 	
 	delete[] fileEntries;
 	return 0;
-}
-
-
-const char * Files::FileTypeStr(uint8 type)
-{
-	switch (type) {
-		case BLUE_SCSI_FILE_TYPE:
-			return "F";
-		case BLUE_SCSI_DIR_TYPE:
-			return "D";
-	}
-	
-	return "?";
 }

@@ -18,7 +18,6 @@ class Files : public Command {
 	
 	private:
 		int ListFiles(const char * path);
-		const char * FileTypeStr(uint8 type);
 		
 	private:
 		const char * dir;

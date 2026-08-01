@@ -37,33 +37,6 @@ bool Devices::ParseArgs(int argc, const char * argv[])
 }
 
 
-const char * Devices::DeviceStr(uint32 devNumber)
-{
-	switch (devNumber) {
-		case BLUE_SCSI_DEVICE_FIXED_DISK:
-			return "Fixed Disk";
-		case BLUE_SCSI_DEVICE_REMOVABLE_DISK:
-			return "Removable Disk";
-		case BLUE_SCSI_DEVICE_OPTICAL_DISK:
-			return "Optical Disk";
-		case BLUE_SCSI_DEVICE_FLOPPY_DISK:
-			return "Floppy Disk";
-		case BLUE_SCSI_DEVICE_MAGNETO_OPTICAL_DISK:
-			return "Magneto Optical Disk";
-		case BLUE_SCSI_DEVICE_TAPE_DEVICE:
-			return "Tape Device";
-		case BLUE_SCSI_DEVICE_NETWORK_DEVICE:
-			return "Network Device";
-		case BLUE_SCSI_DEVICE_ZIP_DISK:
-			return "Zip Disk";
-		case BLUE_SCSI_DEVICE_NO_DEVICE:
-			return "No Device";
-	}
-	
-	return "<UNKNOWN>";
-}
-
-
 int Devices::Execute()
 {
 	BlueSCSIDevice & device = globalOpts->Device();
@@ -82,7 +55,7 @@ int Devices::Execute()
 	printf("|------------------------------------|\n");
 	for (int i = 0; i < BLUE_SCSI_MAX_DEVICES; i++)
 		printf("| %-3d| 0x%02x  | %-22s|\n", i, (uint32)listDevs.devices[i],
-			DeviceStr((uint32)listDevs.devices[i]));
+			comm.DeviceStr((uint32)listDevs.devices[i]));
 	printf("+------------------------------------+\n");
 
 	return 0;

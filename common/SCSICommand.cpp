@@ -116,7 +116,7 @@ const char * SCSICommand::FormatError(const char * fmt, ...)
 
 void SCSICommand::Log(const char * fmt, ...)
 {
-	if (logger == NULL)
+	if (!IsLogging())
 		return;
 	
 	char timestamp[LOGGER_TIMESTAMP_LEN];
@@ -127,6 +127,12 @@ void SCSICommand::Log(const char * fmt, ...)
 	va_start(args, fmt);
 	logger->Log(timestamp, fmt, args);
 	va_end(args);
+}
+
+
+bool SCSICommand::IsLogging()
+{
+	return (logger != NULL);
 }
 
 

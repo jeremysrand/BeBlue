@@ -54,6 +54,7 @@ class SCSICommand {
 		const char * FormatError(const char * fmt, ...);
 		
 		void Log(const char * fmt, ...);
+		bool IsLogging();
 		
 	private:
 		void LogCommand(uint8 * command, uint8 commandLen, size_t dataLen);
