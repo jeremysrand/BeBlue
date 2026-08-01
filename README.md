@@ -158,6 +158,201 @@ Devices on /dev/bus/scsi/0/0/0/raw:
 +------------------------------------+
 ```
 
+### working-dir
+
+The working-dir command allows you to get or set the working directory that the BlueSCSI
+is using on the SD card.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI working-dir
+/dev/bus/scsi/0/0/0/raw:
+  Working Dir: /shared
+[/boot/home/code/BeBlue]> ./BeBlueCLI working-dir /testing
+/dev/bus/scsi/0/0/0/raw:
+  Working Dir: /testing
+[/boot/home/code/BeBlue]> ./BeBlueCLI working-dir
+/dev/bus/scsi/0/0/0/raw:
+  Working Dir: /testing
+```
+
+### files
+
+The files command lists the files in a directory on the SD card.  If you do not provide
+a directory, it shows a list from the current working directory.  If you do provide a
+direcotry, it shows the list from that directory but leaves the current working
+directory unchanged.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI files
+List files under /shared on /dev/bus/scsi/0/0/0/raw:
+
++-----------------------------------------------------------------+
+| Index | Type | Size          | Name                             |
+|-----------------------------------------------------------------|
+| 0     | D    | 262144        | common                           |
+| 1     | D    | 262144        | foo                              |
+| 2     | F    | 1078          | LICENSE                          |
+| 3     | F    | 1078          | outfile                          |
++-----------------------------------------------------------------+
+[/boot/home/code/BeBlue]> ./BeBlueCLI files /
+List files under / on /dev/bus/scsi/0/0/0/raw:
+
++-----------------------------------------------------------------+
+| Index | Type | Size          | Name                             |
+|-----------------------------------------------------------------|
+| 0     | F    | 21943         | log.txt                          |
+| 1     | D    | 262144        | InstallCDs                       |
+| 2     | D    | 262144        | shared                           |
+| 3     | F    | 1252          | lastlog.txt                      |
+| 4     | F    | 4294967296    | HD0 BeOS5.hda                    |
+| 5     | D    | 262144        | ToDo                             |
+| 6     | D    | 262144        | CD5                              |
+| 7     | D    | 262144        | HDs                              |
+| 8     | D    | 262144        | testing                          |
+| 9     | F    | 156           | bluescsi.ini                     |
+| 10    | D    | 262144        | test2                            |
++-----------------------------------------------------------------+
+```
+
+### get
+
+The get command fetches files and directories from the BlueSCSI and writes them
+to your BeOS system.  You may want to use the -r or the -f arguments to enable
+recurse or force mode or both.  If you do not specify a destination, then the name
+of the file or directory you are getting will be written at the current working
+directory of your shell on yout BeOS system.
+
+```
+[/boot/home/code/BeBlue]> ls -l file
+/bin/ls: file: No such file or directory
+[/boot/home/code/BeBlue]> ./BeBlueCLI get /test2/file
+[/boot/home/code/BeBlue]> ls -l file
+-rw-r--r--   1 jrand    bedev        1078 Aug  1 19:43 file
+[/boot/home/code/BeBlue]> ls -al foo
+/bin/ls: foo: No such file or directory
+[/boot/home/code/BeBlue]> ./BeBlueCLI -r get /test2/dir foo
+[/boot/home/code/BeBlue]> ls -al foo
+total 67
+drwxr-xr-x   1 jrand    bedev        2048 Aug  1 19:44 .
+drwxr-xr-x   1 jrand    bedev        2048 Aug  1 19:44 ..
+-rw-r--r--   1 jrand    bedev       17671 Aug  1 19:44 BlueSCSICommand.cpp
+-rw-r--r--   1 jrand    bedev        3784 Aug  1 19:44 BlueSCSICommand.h
+-rw-r--r--   1 jrand    bedev        5107 Aug  1 19:44 BlueSCSIDevice.cpp
+-rw-r--r--   1 jrand    bedev        1270 Aug  1 19:44 BlueSCSIDevice.h
+-rw-r--r--   1 jrand    bedev       10618 Aug  1 19:44 BlueSCSIGet.cpp
+-rw-r--r--   1 jrand    bedev        1389 Aug  1 19:44 BlueSCSIGet.h
+-rw-r--r--   1 jrand    bedev        1265 Aug  1 19:44 BlueSCSIScan.cpp
+-rw-r--r--   1 jrand    bedev         527 Aug  1 19:44 BlueSCSIScan.h
+-rw-r--r--   1 jrand    bedev        8140 Aug  1 19:44 BlueSCSISend.cpp
+-rw-r--r--   1 jrand    bedev        1310 Aug  1 19:44 BlueSCSISend.h
+-rw-r--r--   1 jrand    bedev          61 Aug  1 19:44 Common.h
+-rw-r--r--   1 jrand    bedev         443 Aug  1 19:44 Logger.cpp
+-rw-r--r--   1 jrand    bedev         308 Aug  1 19:44 Logger.h
+-rw-r--r--   1 jrand    bedev        8009 Aug  1 19:44 SCSICommand.cpp
+-rw-r--r--   1 jrand    bedev        1383 Aug  1 19:44 SCSICommand.h  
+```
+
+### send
+
+The send command copies file from your BeOS system to the SD card of the BlueSCSI.
+You may want to use the -r argument to enable recursive mode if you want to send
+a directory.  If you do not specify a destination, then the name of the file or
+directory you are sending to the SD card will be written to the current working
+directory of the BlueSCSI
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI working-dir /newdir
+/dev/bus/scsi/0/0/0/raw:
+  Working Dir: /newdir
+[/boot/home/code/BeBlue]> ./BeBlueCLI files
+List files under /newdir on /dev/bus/scsi/0/0/0/raw:
+  No files found.
+[/boot/home/code/BeBlue]> ./BeBlueCLI send LICENSE
+[/boot/home/code/BeBlue]> ./BeBlueCLI files
+List files under /newdir on /dev/bus/scsi/0/0/0/raw:
+
++-----------------------------------------------------------------+
+| Index | Type | Size          | Name                             |
+|-----------------------------------------------------------------|
+| 0     | F    | 1078          | LICENSE                          |
++-----------------------------------------------------------------+
+[/boot/home/code/BeBlue]> ./BeBlueCLI -r send common codedir
+[/boot/home/code/BeBlue]> ./BeBlueCLI files
+List files under /newdir on /dev/bus/scsi/0/0/0/raw:
+
++-----------------------------------------------------------------+
+| Index | Type | Size          | Name                             |
+|-----------------------------------------------------------------|
+| 0     | F    | 1078          | LICENSE                          |
+| 1     | D    | 262144        | codedir                          |
++-----------------------------------------------------------------+
+[/boot/home/code/BeBlue]> ./BeBlueCLI files /newdir/codedir
+List files under /newdir/codedir on /dev/bus/scsi/0/0/0/raw:
+
++-----------------------------------------------------------------+
+| Index | Type | Size          | Name                             |
+|-----------------------------------------------------------------|
+| 0     | F    | 17671         | BlueSCSICommand.cpp              |
+| 1     | F    | 3784          | BlueSCSICommand.h                |
+| 2     | F    | 5107          | BlueSCSIDevice.cpp               |
+| 3     | F    | 1270          | BlueSCSIDevice.h                 |
+| 4     | F    | 10749         | BlueSCSIGet.cpp                  |
+| 5     | F    | 1389          | BlueSCSIGet.h                    |
+| 6     | F    | 1265          | BlueSCSIScan.cpp                 |
+| 7     | F    | 527           | BlueSCSIScan.h                   |
+| 8     | F    | 8140          | BlueSCSISend.cpp                 |
+| 9     | F    | 1310          | BlueSCSISend.h                   |
+| 10    | F    | 61            | Common.h                         |
+| 11    | F    | 443           | Logger.cpp                       |
+| 12    | F    | 308           | Logger.h                         |
+| 13    | F    | 8009          | SCSICommand.cpp                  |
+| 14    | F    | 1383          | SCSICommand.h                    |
++-----------------------------------------------------------------+ 
+```
+
+### cds
+
+The cds command lists the CDROM images that are available on a emulated CD drive.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI -d /dev/bus/scsi/0/5/0/raw cds
+List CDs on /dev/bus/scsi/0/5/0/raw:
+
++-----------------------------------------------------------------+
+| Index | Type | Size          | Name                             |
+|-----------------------------------------------------------------|
+| 0     | F    | 545712128     | CD5 BeOS_R3.iso                  |
+| 1     | F    | 673261568     | CD5 BeOS_R4_5.iso                |
+| 2     | F    | 643682304     | CD5 BeOS_R4.iso                  |
+| 3     | F    | 642168832     | CD5 BeOS_R5.bin                  |
++-----------------------------------------------------------------+
+```
+
+### set-cd
+
+The set-cd command allows you to change to a different CD image on an emulated CD drive.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI -d /dev/bus/scsi/0/5/0/raw set-cd "CD5 BeOS_R4_5.iso"
+```
+
+### wifi-scan
+
+The wifi-scan command should list all available WiFi networks.  But this command does
+not work yet (see Future).
+
+
+### wifi-join
+
+The wifi-join command alows you to connect to a specific WiFi network.  But this
+command does not work yet (see Future).
+
+
+### wifi-info
+
+The wifi-info command shows details about the currently joined WiFi network.  But this
+command does not work yet (see Future).
+
 
 ## Future
 
