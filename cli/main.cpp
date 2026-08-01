@@ -15,7 +15,7 @@
 
 static void usage(const char * argv0, CommandRegistry & registry)
 {
-	printf("USAGE: %s [-h] [-d device] [-v] command...\n", argv0);
+	printf("USAGE: %s [-h] [-d device] [-v] [-r] [-f] [-l logfile] command...\n", argv0);
 	printf("  Commands:\n");
 	registry.PrintUsage();
 }
