@@ -101,25 +101,33 @@ bool BlueSCSISend::Send()
 		return false;
 	}
 
-	if ((dir[0] != '\0') &&
-		(!comm.SetWorkingDir(dir, sizeof(dir)))) {
-		HandleSendError("Unable to change current working directory");
-		return false;
-	} else {
-		if ((device.SupportsSetWorkingDir()) &&
-			(!comm.GetWorkingDir(cwd, sizeof(cwd)))) {
-			HandleSendError("Unable to get current working directory");
+	if (dir[0] != '\0') {
+		device.Log("Destination dir is set to \"%s\", setting cwd", dir);
+		if (!comm.SetWorkingDir(dir, sizeof(dir))) {
+			HandleSendError("Unable to change current working directory");
 			return false;
 		}
+	} else {
+		device.Log("Destination dir is unset");
+		if (device.SupportsSetWorkingDir()) {
+			device.Log("Fetching current working directory");
+			if (!comm.GetWorkingDir(cwd, sizeof(cwd))) {
+				HandleSendError("Unable to get current working directory");
+				return false;
+			}
+		}
 		strcpy(dir, cwd);
+		device.Log("Setting dest dir to the cwd, \"%s\"", dir);
 	}
 	
 	bool result = SendToRightDir();
 	
-	if ((device.SupportsSetWorkingDir()) &&
-	    (!comm.SetWorkingDir(cwd, sizeof(cwd)))) {
-		HandleSendError("Unable to restore current working directory");
-		return false;
+	if (device.SupportsSetWorkingDir()) {
+		device.Log("Restoring working dir to \"%s\"", cwd);
+		if (!comm.SetWorkingDir(cwd, sizeof(cwd))) {
+			HandleSendError("Unable to restore current working directory");
+			return false;
+		}
 	}
 	
 	return result;
@@ -128,13 +136,13 @@ bool BlueSCSISend::Send()
 
 bool BlueSCSISend::SetFilenameFromEntry(BEntry * entry, bool useExistingFilename)
 {
-	if ((useExistingFilename) &&
-		(filename[0] != '\0'))
-		return true;
-		
 	if (RaiseError("Unable to get filename of source entry",
 		entry->GetName(beFilename)) != B_NO_ERROR)
 		return false;
+	
+	if ((useExistingFilename) &&
+		(filename[0] != '\0'))
+		return true;
 		
 	if (strlen(beFilename) > BLUE_SCSI_MAX_FILE_NAME_LEN) {
 		HandleSendError("Source filename is too long for the BlueSCSI");
@@ -182,7 +190,6 @@ bool BlueSCSISend::SendFile(BEntry * entry, bool useExistingFilename)
 		return false;
 	
 	if (!comm.PrepareToSendFile(filename)) {
-		fprintf(stderr, "filename = \"%s\"\n", filename);
 		HandleSendError("Unable to open target file for writing");
 		return false;
 	}

@@ -188,7 +188,7 @@ bool BlueSCSICommand::GetWorkingDir(char * path, uint8 maxPathLen)
 
 bool BlueSCSICommand::SetWorkingDir(char * path, uint8 maxPathLen)
 {
-	Log("Setting the working director of the BlueSCSI to: \"%s\"", path);
+	Log("Setting the working directory of the BlueSCSI to \"%s\"", path);
 	return ToolboxMetadata(BLUE_SCSI_SET_WORKING_DIR, (uint8 *)path, maxPathLen);
 }
 

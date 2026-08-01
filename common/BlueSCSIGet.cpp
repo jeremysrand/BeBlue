@@ -295,6 +295,11 @@ bool BlueSCSIGet::GetDir(const BlueSCSIFileEntry * fileEntry, BEntry * entryArg)
 	strcpy(&(dir[oldDirLen + 1]), fileEntry->name);
 	device.Log("  source dir is now \"%s\"", dir);
 	
+	if (!comm.SetWorkingDir(dir, sizeof(dir))) {
+		HandleGetError("Unable to change current working directory");
+		return false;
+	}
+	
 	uint8 numFiles = 0;
 	if (!comm.CountFiles(&numFiles)) {
 		HandleGetError("Unable to count files in the source directory");
