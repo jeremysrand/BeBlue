@@ -1,6 +1,6 @@
 # BeBlue
 
-** This is not production quality and you could lose data.  Use at own risk **
+**This is not production quality and you could lose data.  Use at own risk**
 
 With that out of the way, this project is an attempt to bring BlueSCSI support to BeOS.
 I am focused on the PPC platforms and my BeBox specifically, at least to start with.  Not too
@@ -43,8 +43,6 @@ USAGE: ./BeBlueCLI [-h] [-d device] [-v] [-r] [-f] [-l logfile] command...
     wifi-info
 ```
 
-### Arguments
-
 The -h argument is short for help and shows the usage
 
 The -d argument allows you to specify which device you want to interact with.  If not specified, the command
@@ -66,8 +64,99 @@ option.
 The -l argument allows you to log detailed information.  If you think you have found a bug, reproduce it and
 use the -l argument to gather the logs.  You can create an issue here with the logs attached.
 
-### Commands
+The individual commands are described below
 
+### scan
+
+The scan command walks all devices on all SCSI busses and identifies all devices.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI scan
+Scanning for BlueSCSI devices on all SCSI busses:
+
++------------------------------------------------------------+
+| Bus | ID | LUN | Type    | Vendor  | Device          | Rev |
+|------------------------------------------------------------|
+| 0   | 0  | 0   | Disk    | BLUESCSI| HARDDRIVE       | 1.0 |
+| 0   | 5  | 0   | CD-ROM  | BLUESCSI| CDROM           | 1.0 |
++------------------------------------------------------------+
+```
+
+### inquiry
+
+The inquiry command dumps the output of a SCSI inquiry command against the selected
+device.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI inquiry
+Inquiry output from /dev/bus/scsi/0/0/0/raw:
+  Type:         0 (Disk)
+  SCSI Version: 2
+  Vendor:       "BLUESCSI"
+  Device:       "HARDDRIVE"
+  Version:      "1.0"
+```
+
+### capabilities
+
+The capabilities command prints the state of the BlueSCSI's extra features.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI capabilities
+Capabilities of /dev/bus/scsi/0/0/0/raw:
+    Version: 0
+    Flags:   7
+      Large Transfers: Supported
+      Large Send:      Supported
+      Set Working Dir: Supported
+
+```
+
+### debug
+
+The debug command allows you to check to see if debugging is on or enable/disable
+debugging on the BlueSCSI.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI debug
+/dev/bus/scsi/0/0/0/raw:
+  Debug: Disabled
+[/boot/home/code/BeBlue]> ./BeBlueCLI debug on
+/dev/bus/scsi/0/0/0/raw:
+  Debug: Enabled
+[/boot/home/code/BeBlue]> ./BeBlueCLI debug
+/dev/bus/scsi/0/0/0/raw:
+  Debug: Enabled
+[/boot/home/code/BeBlue]> ./BeBlueCLI debug off
+/dev/bus/scsi/0/0/0/raw:
+  Debug: Disabled
+[/boot/home/code/BeBlue]> ./BeBlueCLI debug
+/dev/bus/scsi/0/0/0/raw:
+  Debug: Disabled
+```
+
+### devices
+
+The devices command asks the BlueSCSI for information about all of the individual
+devices on the SCSI bus that it is emulating.
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI devices
+Devices on /dev/bus/scsi/0/0/0/raw:
+
++------------------------------------+
+| ID | Type  | Description           |
+|------------------------------------|
+| 0  | 0x00  | Fixed Disk            |
+| 1  | 0xff  | No Device             |
+| 2  | 0xff  | No Device             |
+| 3  | 0xff  | No Device             |
+| 4  | 0xff  | No Device             |
+| 5  | 0x02  | Optical Disk          |
+| 6  | 0xff  | No Device             |
+| 7  | 0xff  | No Device             |
++------------------------------------+
+```
 
 
 ## Future
