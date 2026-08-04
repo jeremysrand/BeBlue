@@ -56,10 +56,13 @@ The -v argument increases the verbosity of the output.
 The -r argument is used with get and send commands and tells them to allow recursion.  You must specify
 the -r argument if you want to get or send directories.
 
-The -f argument is only used with the get command.  If you are getting a file or directory from the BlueSCSI
-and copying it onto BeOS and the target file/dirs already exist, the command will fail.  But if you use the -f
-argument to force the get, the existing file/dir will be deleted and the get will proceed.  Be careful with this
-option.
+The -f argument is only used with the get and send commands.  If you are getting a file or directory from the
+BlueSCSI and copying it onto BeOS and the target file/dirs already exist, the command will fail.  But if you use
+the -f argument to force the get, the existing file/dir will be deleted and the get will proceed.  Similarly,
+if you are sending a file or directory to the BlueSCSI and that file or directory already exists, the command
+will fail.  Use the -f argument to force the send.  Note that sending a directory to an existing directory
+merges the existing contents of the directory on the BlueSCSI with the files from the source.  There is no way
+to delete files from the BlueSCSI today.  Even so, be very careful with the force option.  You can lose data.
 
 The -l argument allows you to log detailed information.  If you think you have found a bug, reproduce it and
 use the -l argument to gather the logs.  You can create an issue here with the logs attached.

@@ -26,11 +26,13 @@ class BlueSCSISend {
 		
 		void SetSrc(BEntry * arg);
 		bool SetRecurse(bool arg);
+		void SetForce(bool arg);
 		bool SetDest(const char * arg);
 		
 		bool Send();
 		
 	private:
+		bool BuildDest();
 		status_t RaiseError(const char * err, status_t status);
 		void HandleSendError(const char * err, status_t status = B_NO_ERROR);
 		
@@ -50,6 +52,7 @@ class BlueSCSISend {
 		char beFilename[B_FILE_NAME_LENGTH];
 		
 		bool recurse;
+		bool force;
 		bool supportsBulk;
 		
 		BEntry * src;

@@ -81,6 +81,8 @@ int Send::Execute()
 		fprintf(stderr, "ERROR: Unable to set recurse mode\n");
 		return -1;
 	}
+	send->SetForce(globalOpts->ShouldForce());
+	
 	if (dest != NULL) {
 		if (!send->SetDest(dest)) {
 			delete send;

@@ -52,6 +52,12 @@ bool BlueSCSISend::SetRecurse(bool arg)
 }
 
 
+void BlueSCSISend::SetForce(bool arg)
+{
+	force = arg;
+}
+
+
 bool BlueSCSISend::SetDest(const char * dest)
 {
 	return device.ParsePath(dest, cwd, dir, filename);
@@ -78,6 +84,157 @@ status_t BlueSCSISend::RaiseError(const char * err, status_t status)
 	return status;
 }
 
+bool BlueSCSISend::BuildDest()
+{
+	if (RaiseError("Unable to get filename of source entry",
+		src->GetName(beFilename)) != B_NO_ERROR)
+		return false;
+	
+	bool destCanBeDir = device.SupportsSetWorkingDir();
+	if (filename[0] == '\0') {
+		destCanBeDir = false;	
+		if (strlen(beFilename) > BLUE_SCSI_MAX_FILE_NAME_LEN) {
+			HandleSendError("Source filename is too long for the BlueSCSI");
+			return false;
+		}
+		
+		device.Log("Destination is not set so send \"%s\" to current working directory", beFilename);
+		if (!device.ParsePath(beFilename, cwd, dir, filename))
+			return false;
+	}
+	
+	
+	bool keepGoing = true;
+	while (keepGoing) {
+		keepGoing = false;
+		
+		if (dir[0] != '\0') {
+			device.Log("Change cwd to destination dir \"%s\"", dir);
+			if (!comm.SetWorkingDir(dir, sizeof(dir))) {
+				HandleSendError("Unable to change current working directory");
+				return false;
+			}
+		}
+		
+		uint8 numFiles = 0;
+		if (!comm.CountFiles(&numFiles)) {
+			HandleSendError("Unable to count files in the destination directory");
+			return false;
+		}
+		device.Log("There are %u files in the destination dir", (uint32)numFiles);
+		
+		
+		// If there are no files in the destination directory, then the file
+		// cannot already exist.  We can just proceed with the send.
+		if (numFiles == 0) {
+			device.Log("Proceed with send because there are no files in the destination dir");
+			break;
+		}
+		
+		device.Log("List files in destination dir to check if it exists already");
+		
+		// Need to list all of the files in the destination directory to see
+		// if the target exists already.
+		BlueSCSIFileEntry * fileEntries = new(BlueSCSIFileEntry[numFiles]);
+		if (!comm.ListFiles(fileEntries, numFiles)) {
+			delete[] fileEntries;
+			HandleSendError("Unable to list files in the destination directory");
+			return false;
+		}
+		
+		BlueSCSIFileEntry * destFileEntry = NULL;
+		for (int i = 0; i < numFiles; i++) {
+			if (strcmp(fileEntries[i].name, filename) == 0) {
+				device.Log("Found \"%s\" already exists in destination directory", filename);
+				destFileEntry = &(fileEntries[i]);
+				break;
+			}
+		}
+		
+		// If the destination does not exist, then we can proceed with the send
+		// and create the new file/directory in the destination directory.
+		if (destFileEntry == NULL) {
+			device.Log("File \"%s\" does not exist in destination dir, continue send", filename);
+			delete[] fileEntries;
+			break;
+		}
+		
+		bool isFile = (destFileEntry->type == BLUE_SCSI_FILE_TYPE);
+		delete[] fileEntries;
+		
+		if (isFile) {
+			if (!src->IsFile()) {
+				HandleSendError("The source is not a file but the destination is a file which already exists");
+				return false;
+			}
+			
+			device.Log("Source is a file and destination is an existing file");
+			
+			if (!force) {
+				HandleSendError("The destination file already exists but force is not enabled");
+				return false;
+			}
+			
+			// The source is a file and the destination is a file which exists.
+			// But force is enabled so proceed with the send.
+			device.Log("Will overwrite \"%s\" file at destination because force is on", filename); 
+			break;
+		}
+		
+		
+		// If the destination at this point cannot be treated like a directory
+		// into which the source is copied, then we better be copying a directory
+		if (!destCanBeDir) {
+			if (!src->IsDirectory()) {
+				HandleSendError("The source is not a directory but the destination is a directory which already exissts");
+				return false;
+			}
+			
+			device.Log("Source is a directory and destination is an existing directory");
+			
+			if (!force) {
+				HandleSendError("The destination directory already exists but force is not enabled");
+				return false;
+			}
+			
+			// The source is a directory and the destination is a directory which
+			// exists.  But force is enabled so proceed with the send.
+			device.Log("Will overwrite \"%s\" directory at destination because force is on", filename); 
+			break;
+		}
+		
+		device.Log("The destination \"%s\" is an existing directory so will send source into that dir", filename);
+		
+		// This case happens when the user provides a specific destination and
+		// that destination is an existing directory.  In that case, we will
+		// send the source file/directory into the destination directory and
+		// inherit the source filename for the destination.
+		size_t dirLen = strlen(dir);
+		if (dirLen + strlen(filename) + 1 >= BLUE_SCSI_MAX_WORKING_DIR_LEN) {
+			HandleSendError("The directory portion of the path is too long");
+			return false;
+		}
+		
+		char * ptr = &(dir[dirLen - 1]);
+		if (*ptr != '/')
+			ptr++;
+		*ptr = '/';
+		ptr++;
+		strcpy(ptr, filename);
+			
+		if (strlen(beFilename) > BLUE_SCSI_MAX_FILE_NAME_LEN) {
+			HandleSendError("Source filename is too long for the BlueSCSI");
+			return false;
+		}
+		strcpy(filename, beFilename);
+		
+		keepGoing = true;
+		destCanBeDir = false;
+	}
+	
+	return true;
+}
+
 
 bool BlueSCSISend::Send()
 {
@@ -93,6 +250,7 @@ bool BlueSCSISend::Send()
 		device.Log("  dest dir      = \"%s\"", dir);
 		device.Log("  dest filename = \"%s\"", filename);
 		device.Log("  recurse       = %s", recurse ? "ON" : "OFF");
+		device.Log("  force         = %s", force ? "ON" : "OFF");
 		device.Log("  supportsBulk  = %s", supportsBulk ? "YES" : "NO");
 	}
 	
@@ -100,25 +258,9 @@ bool BlueSCSISend::Send()
 		HandleSendError("Source entry does not exist");
 		return false;
 	}
-
-	if (dir[0] != '\0') {
-		device.Log("Destination dir is set to \"%s\", setting cwd", dir);
-		if (!comm.SetWorkingDir(dir, sizeof(dir))) {
-			HandleSendError("Unable to change current working directory");
-			return false;
-		}
-	} else {
-		device.Log("Destination dir is unset");
-		if (device.SupportsSetWorkingDir()) {
-			device.Log("Fetching current working directory");
-			if (!comm.GetWorkingDir(cwd, sizeof(cwd))) {
-				HandleSendError("Unable to get current working directory");
-				return false;
-			}
-		}
-		strcpy(dir, cwd);
-		device.Log("Setting dest dir to the cwd, \"%s\"", dir);
-	}
+	
+	if (!BuildDest())
+		return false;
 	
 	bool result = SendToRightDir();
 	
