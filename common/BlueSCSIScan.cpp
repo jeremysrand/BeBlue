@@ -5,6 +5,7 @@
 // Defines
 
 #define SCSI_BUS "/dev/bus/scsi"
+#define SCSI_DISKS "/dev/disk/scsi"
 #define SCSI_RAW_DEV_NAME "raw"
 
 
@@ -41,7 +42,13 @@ BlueSCSIDevice * BlueSCSIScan::DeviceAt(int32 index)
 void BlueSCSIScan::Scan()
 {
 	BDirectory dir(SCSI_BUS);
-	Walk(&dir);
+	if (dir.InitCheck() == B_NO_ERROR)
+		Walk(&dir);
+	else {
+		dir.SetTo(SCSI_DISKS);
+		if (dir.InitCheck() == B_NO_ERROR)
+			Walk(&dir);
+	}
 }
 
 
