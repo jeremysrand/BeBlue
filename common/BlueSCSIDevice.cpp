@@ -12,7 +12,8 @@
 
 // Implementation
 
-BlueSCSIDevice::BlueSCSIDevice(BPath * pathArg, BlueSCSIDeviceErrorHandler * errHandlerArg)
+BlueSCSIDevice::BlueSCSIDevice(BPath * pathArg,
+	BlueSCSIDeviceErrorHandler * errHandlerArg, bool force)
 	: isBlueSCSI(false),
 	  bus(0),
 	  target(0),
@@ -24,7 +25,7 @@ BlueSCSIDevice::BlueSCSIDevice(BPath * pathArg, BlueSCSIDeviceErrorHandler * err
 	  capabilities(),
 	  errHandler(errHandlerArg)
 {
-	Init();
+	Init(force);
 	if (IsLogging()) {
 		Log("Device at %s is%s a BlueSCSI", PathString(), (IsBlueSCSI() ? "" : " not"));
 		Log("  Bus    = %d", Bus());
@@ -58,7 +59,7 @@ int32 BlueSCSIDevice::Lun()
 }
 
 
-void BlueSCSIDevice::Init()
+void BlueSCSIDevice::Init(bool force)
 {
 	if (comm.HasError()) {
 		HandleError(comm.GetErrorStr());
@@ -68,20 +69,23 @@ void BlueSCSIDevice::Init()
 	if (!comm.IsBlueSCSIInquiry(&inquiry)) {
 		if (comm.HasError())
 			HandleError(comm.GetErrorStr());
-		return;
+		if (!force)
+			return;
 	}
 	
 	uint8 data[BLUE_SCSI_MODE_SENSE_SIZE];
 	if (!comm.IsBlueSCSIModeSense(data, sizeof(data))) {
 		if (comm.HasError())
 			HandleError(comm.GetErrorStr());
-		return;
+		if (!force)
+			return;
 	}
 	
 	if (!comm.GetCapabilities(&capabilities)) {
 		if (comm.HasError())
 			HandleError(comm.GetErrorStr());
-		return;
+		if (!force)
+			return;
 	}
 	
 	isBlueSCSI = true;

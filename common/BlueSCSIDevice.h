@@ -19,7 +19,9 @@ class BlueSCSIDeviceErrorHandler {
 class BlueSCSIDevice
 {
 	public:
-		BlueSCSIDevice(BPath * path, BlueSCSIDeviceErrorHandler * errHandler = NULL);
+		BlueSCSIDevice(BPath * path,
+			BlueSCSIDeviceErrorHandler * errHandler = NULL,
+			bool force = false);
 		
 		bool IsBlueSCSI();
 		
@@ -49,7 +51,7 @@ class BlueSCSIDevice
 		bool IsLogging();
 		
 	private:
-		void Init();
+		void Init(bool force);
 
 	private:
 		bool isBlueSCSI;

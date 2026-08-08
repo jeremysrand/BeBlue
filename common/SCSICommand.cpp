@@ -306,7 +306,7 @@ bool SCSICommand::Inquiry(SCSIInquiryResult * result)
 	copyString(result->versionStr, &(data.inquiry_data[SCSI_INQ_VERSION_STR_OFFSET]), SCSI_INQ_VERSION_STR_LEN);
 	
 	Log("Inquiry successful");
-	Log("  type    = %s (%u)", result->typeStr, (uint32)result->typeStr);
+	Log("  type    = %s (%u)", result->typeStr, (uint32)result->type);
 	Log("  vendor  = %s", result->vendorStr);
 	Log("  device  = %s", result->deviceStr);
 	Log("  version = %s", result->versionStr);

@@ -11,6 +11,7 @@
 #include "cli/Scan.h"
 #include "cli/Send.h"
 #include "cli/SetCD.h"
+#include "cli/Version.h"
 #include "cli/WifiInfo.h"
 #include "cli/WifiJoin.h"
 #include "cli/WifiScan.h"
@@ -22,6 +23,7 @@
 CommandRegistry::CommandRegistry()
 	: commands()
 {
+	commands.AddItem(new Version());
 	commands.AddItem(new Scan());
 	commands.AddItem(new Inquiry());
 	commands.AddItem(new Capabilities());

@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		(devicePath != NULL)) {
 		if (devicePath != NULL) {
 			BPath path(devicePath);
-			device = new BlueSCSIDevice(&path, command);
+			device = new BlueSCSIDevice(&path, command, globalOpts.ShouldForce());
 			if (!device->IsBlueSCSI()) {
 				delete device;
 				fprintf(stderr, "ERROR: Device at %s is not a BlueSCSI.\n",
