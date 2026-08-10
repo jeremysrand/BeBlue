@@ -48,6 +48,7 @@ int Inquiry::Execute()
 	printf("  Vendor:       \"%s\"\n", inquiry.vendorStr);
 	printf("  Device:       \"%s\"\n", inquiry.deviceStr);
 	printf("  Version:      \"%s\"\n", inquiry.versionStr);
+	printf("  Vendor Info:  \"%s\"\n", inquiry.vendorInfoStr);
 	
 	return 0;
 }

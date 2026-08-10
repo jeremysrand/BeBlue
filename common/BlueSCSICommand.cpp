@@ -18,7 +18,8 @@
 #define BLUE_SCSI_GET_WORKING_DIR 0x03
 #define BLUE_SCSI_SET_WORKING_DIR 0x02
 
-#define BLUE_SCSI_VENDOR "BLUESCSI"
+#define BLUE_SCSI_VENDOR_INFO "BlueSCSI"
+#define BLUE_SCSI_VENDOR_INFO_LEN 8
 #define BLUE_SCSI_VERSION "1.0"
 
 #define BLUE_SCSI_MODE_SENSE_MIN_DATA_LEN 64
@@ -78,8 +79,8 @@ bool BlueSCSICommand::IsBlueSCSIInquiry(SCSIInquiryResult * result)
 	if (!Inquiry(result))
 		return false;
 		
-	bool isBlueSCSI = ((strcmp(result->vendorStr, BLUE_SCSI_VENDOR) == 0) &&
-            (strcmp(result->versionStr, BLUE_SCSI_VERSION) == 0));
+	bool isBlueSCSI = 
+		(strncmp(result->vendorInfoStr, BLUE_SCSI_VENDOR_INFO, BLUE_SCSI_VENDOR_INFO_LEN) == 0);
     
     Log("Device is %sa BlueSCSI from Inquiry result", (isBlueSCSI ? "" : "not "));
     

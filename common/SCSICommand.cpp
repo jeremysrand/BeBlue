@@ -22,6 +22,8 @@
 #define SCSI_INQ_VENDOR_STR_OFFSET 8
 #define SCSI_INQ_DEVICE_STR_OFFSET 16
 #define SCSI_INQ_VERSION_STR_OFFSET 32
+#define SCSI_INQ_VENDOR_INFO_STR_OFFSET 36
+#define SCSI_INQ_LEN 56
 
 #define SCSI_MODE_SENSE 0x1a
 
@@ -220,7 +222,8 @@ bool SCSICommand::ExecuteCommand(uint8 * command, uint8 commandLen, void * data,
 		delete[](errorStr);
 		errorStr = NULL;
 	}
-	LogCommand(command, commandLen, dataLen);
+	if (IsLogging())
+		LogCommand(command, commandLen, dataLen);
 	
 	rdc.data = data;
 	rdc.data_length = dataLen;
@@ -242,6 +245,16 @@ bool SCSICommand::ExecuteCommand(uint8 * command, uint8 commandLen, void * data,
 	if (e != 0) {
 		RaiseError(FormatError("Error from raw command of device: %s", strerror(errno)));
 		return false;
+	}
+	
+	if (IsLogging()) {
+		Log("  CAM status: %u  SCSI status: %u", (uint32)rdc.cam_status, (uint32)rdc.scsi_status);
+		Log("  Sense: %02x %02x %02x %02x %02x %02x %02x %02x", (uint32)sense[0], (uint32)sense[1],
+			(uint32)sense[2], (uint32)sense[3], (uint32)sense[4], (uint32)sense[5], (uint32)sense[6],
+			(uint32)sense[7]); 
+		Log("         %02x %02x %02x %02x %02x %02x %02x %02x", (uint32)sense[8], (uint32)sense[9],
+			(uint32)sense[10], (uint32)sense[11], (uint32)sense[12], (uint32)sense[13], (uint32)sense[14],
+			(uint32)sense[15]); 
 	}
 	
 	if (rdc.cam_status != CAM_REQ_CMP) {
@@ -287,29 +300,31 @@ bool SCSICommand::Inquiry(SCSIInquiryResult * result)
 		"Comm",
 		"Unknown"
 	};
-	scsi_inquiry data;
+	uint8 data[SCSI_INQ_LEN];
 	uint8 command[] = { SCSI_INQUIRY, 0x00, 0x00, 0x00, sizeof(data), 0x00 };
 	
 	Log("Execute Inquiry command");
-	if (!ExecuteCommand(command, sizeof(command), &data, sizeof(data))) {
+	if (!ExecuteCommand(command, sizeof(command), data, sizeof(data))) {
 		return false;
 	}
 	
-	result->type = data.inquiry_data[SCSI_INQ_TYPE_OFFSET] & SCSI_INQ_TYPE_MASK;
+	result->type = data[SCSI_INQ_TYPE_OFFSET] & SCSI_INQ_TYPE_MASK;
 	result->typeStr = typeStrings[(result->type > NUM_ELEMS(typeStrings) ?
 		NUM_ELEMS(typeStrings) : result->type)];
 		
-	result->scsiVersion = data.inquiry_data[SCSI_INQ_SCSI_VERSION_OFFSET];
+	result->scsiVersion = data[SCSI_INQ_SCSI_VERSION_OFFSET];
 	
-	copyString(result->vendorStr, &(data.inquiry_data[SCSI_INQ_VENDOR_STR_OFFSET]), SCSI_INQ_VENDOR_STR_LEN);
-	copyString(result->deviceStr, &(data.inquiry_data[SCSI_INQ_DEVICE_STR_OFFSET]), SCSI_INQ_DEVICE_STR_LEN);
-	copyString(result->versionStr, &(data.inquiry_data[SCSI_INQ_VERSION_STR_OFFSET]), SCSI_INQ_VERSION_STR_LEN);
+	copyString(result->vendorStr, &(data[SCSI_INQ_VENDOR_STR_OFFSET]), SCSI_INQ_VENDOR_STR_LEN);
+	copyString(result->deviceStr, &(data[SCSI_INQ_DEVICE_STR_OFFSET]), SCSI_INQ_DEVICE_STR_LEN);
+	copyString(result->versionStr, &(data[SCSI_INQ_VERSION_STR_OFFSET]), SCSI_INQ_VERSION_STR_LEN);
+	copyString(result->vendorInfoStr, &(data[SCSI_INQ_VENDOR_INFO_STR_OFFSET]), SCSI_INQ_VENDOR_INFO_STR_LEN);
 	
 	Log("Inquiry successful");
-	Log("  type    = %s (%u)", result->typeStr, (uint32)result->type);
-	Log("  vendor  = %s", result->vendorStr);
-	Log("  device  = %s", result->deviceStr);
-	Log("  version = %s", result->versionStr);
+	Log("  type       = %s (%u)", result->typeStr, (uint32)result->type);
+	Log("  vendor     = %s", result->vendorStr);
+	Log("  device     = %s", result->deviceStr);
+	Log("  version    = %s", result->versionStr);
+	Log("  vendorInfo = %s", result->vendorInfoStr);
 	
 	return true;
 }

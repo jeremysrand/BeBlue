@@ -55,7 +55,7 @@ int Scan::Execute()
 	if (globalOpts->HasDevice()) {
 		PrintDevice(globalOpts->Device());
 	} else {
-		BlueSCSIScan scan;
+		BlueSCSIScan scan(this);
 		for (int32 i = 0; i < scan.NumDevices(); i++)
 			PrintDevice(*scan.DeviceAt(i));
 	}

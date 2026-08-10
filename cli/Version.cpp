@@ -2,9 +2,7 @@
 
 #include "cli/GlobalOpts.h"
 #include "cli/Version.h"
-
-
-#define VERSION "BeBlueCli v0.9.3"
+#include "VersionStr.h"
 
 
 // Implementation
@@ -44,6 +42,6 @@ bool Version::ParseArgs(int argc, const char * argv[])
 
 int Version::Execute()
 {
-	printf("%s\n", VERSION);
+	printf("%s\n", VERSION_STR);
 	return 0;	
 }

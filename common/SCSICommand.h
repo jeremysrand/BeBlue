@@ -14,6 +14,7 @@
 #define SCSI_INQ_VENDOR_STR_LEN 8
 #define SCSI_INQ_DEVICE_STR_LEN 16
 #define SCSI_INQ_VERSION_STR_LEN 4
+#define SCSI_INQ_VENDOR_INFO_STR_LEN 20
 
 #define SCSI_MODE_SENSE_BLOCK_DESC_LEN_OFFSET 3
 #define SCSI_MODE_SENSE_HEADER_SIZE 4
@@ -28,6 +29,7 @@ struct SCSIInquiryResult {
 	char vendorStr[SCSI_INQ_VENDOR_STR_LEN + 1];
 	char deviceStr[SCSI_INQ_DEVICE_STR_LEN + 1];
 	char versionStr[SCSI_INQ_VERSION_STR_LEN + 1];
+	char vendorInfoStr[SCSI_INQ_VENDOR_INFO_STR_LEN + 1];
 };
 
 

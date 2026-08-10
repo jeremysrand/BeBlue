@@ -8,6 +8,11 @@
 #define BLUE_SCSI_SCAN_H
 
 
+// Forward declarations
+
+class Logger;
+
+
 // Interface
 
 class BlueSCSIScan {
@@ -23,9 +28,13 @@ class BlueSCSIScan {
 		void Walk(BDirectory * dir);
 		void CheckIfBlueSCSI(BPath * path);
 		
+		void Log(const char * fmt, ...);
+		bool IsLogging();
+		
 	private:
 		BList deviceList;
 		BlueSCSIDeviceErrorHandler * errHandler;
+		Logger * logger;
 };
 
 
