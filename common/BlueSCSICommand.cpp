@@ -99,7 +99,6 @@ bool BlueSCSICommand::IsBlueSCSIModeSense(uint8 * data, uint8 dataLen)
 	if (!ModeSense(BLUE_SCSI_MODE_SENSE_PAGE, data, dataLen))
 		return false;
 	
-	
 	uint8 blockDescLen = data[SCSI_MODE_SENSE_BLOCK_DESC_LEN_OFFSET];
 	
 	bool isBlueSCSI = true;

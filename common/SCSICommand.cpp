@@ -332,7 +332,7 @@ bool SCSICommand::Inquiry(SCSIInquiryResult * result)
 
 bool SCSICommand::ModeSense(uint8 page, uint8 * data, uint8 dataLen)
 {
-	uint8 command[] = { SCSI_MODE_SENSE, 0x00, page, 0x00, dataLen, 0x00 };
+	uint8 command[] = { SCSI_MODE_SENSE, 0x08, page, 0x00, dataLen, 0x00 };
 	Log("Execute ModeSense command");
 	return ExecuteCommand(command, sizeof(command), data, dataLen);
 }

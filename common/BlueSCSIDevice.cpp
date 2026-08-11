@@ -77,6 +77,16 @@ void BlueSCSIDevice::Init(bool force)
 	if (!comm.IsBlueSCSIModeSense(data, sizeof(data))) {
 		if (comm.HasError())
 			HandleError(comm.GetErrorStr());
+			
+		if (IsLogging()) {
+			for (int i = 0; i < BLUE_SCSI_MODE_SENSE_SIZE; i += 8) {
+				Log("DATA[%02d]: %02x %02x %02x %02x %02x %02x %02x %02x",
+					i, (uint32)data[i], (uint32)data[i + 1],
+					(uint32)data[i + 2], (uint32)data[i + 3],
+					(uint32)data[i + 4], (uint32)data[i + 5],
+					(uint32)data[i + 6], (uint32)data[i + 7]);
+			}
+		}
 		if (!force)
 			return;
 	}
