@@ -42,6 +42,6 @@ bool Version::ParseArgs(int argc, const char * argv[])
 
 int Version::Execute()
 {
-	printf("%s\n", VERSION_STR);
+	printf("%s\n", VERSION_DETAIL);
 	return 0;	
 }

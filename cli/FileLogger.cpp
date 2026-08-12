@@ -15,7 +15,7 @@ FileLogger::FileLogger(const char * path) :
 	if (file != NULL) {
 		char timestamp[LOGGER_TIMESTAMP_LEN];
 		FormatTimestamp(timestamp);
-		fprintf(file, "%s  %s\n", timestamp, VERSION_STR);
+		fprintf(file, "%s  %s\n", timestamp, VERSION_DETAIL);
 	}
 }
 

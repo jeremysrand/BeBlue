@@ -7,7 +7,7 @@
 
 // Defines
 
-#define BLUE_SCSI_MODE_SENSE_SIZE 64
+#define BLUE_SCSI_MODE_SENSE_SIZE 48
 
 
 // Implementation
