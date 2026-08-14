@@ -27,6 +27,7 @@ The CLI usage looks like this:
 ```
 USAGE: ./BeBlueCLI [-h] [-d device] [-v] [-r] [-f] [-l logfile] command...
   Commands:
+    version
     scan
     inquiry
     capabilities
@@ -38,9 +39,6 @@ USAGE: ./BeBlueCLI [-h] [-d device] [-v] [-r] [-f] [-l logfile] command...
     send source [dest]
     cds
     set-cd filename
-    wifi-scan
-    wifi-join channel ssid key
-    wifi-info
 ```
 
 The -h argument is short for help and shows the usage
@@ -68,6 +66,15 @@ The -l argument allows you to log detailed information.  If you think you have f
 use the -l argument to gather the logs.  You can create an issue here with the logs attached.
 
 The individual commands are described below
+
+### version
+
+The version command just prints out the version of BeBlue you are using
+
+```
+[/boot/home/code/BeBlue]> ./BeBlueCLI version
+BeBlue v0.9.8 (build 122)
+```
 
 ### scan
 
@@ -98,6 +105,7 @@ Inquiry output from /dev/bus/scsi/0/0/0/raw:
   Vendor:       "BLUESCSI"
   Device:       "HARDDRIVE"
   Version:      "1.0"
+  Vendor Info:  "BlueSCSIv2026.04.27"
 ```
 
 ### capabilities
@@ -223,7 +231,7 @@ The get command fetches files and directories from the BlueSCSI and writes them
 to your BeOS system.  You may want to use the -r or the -f arguments to enable
 recurse or force mode or both.  If you do not specify a destination, then the name
 of the file or directory you are getting will be written at the current working
-directory of your shell on yout BeOS system.
+directory of your shell on your BeOS system.
 
 ```
 [/boot/home/code/BeBlue]> ls -l file
@@ -258,10 +266,10 @@ drwxr-xr-x   1 jrand    bedev        2048 Aug  1 19:44 ..
 ### send
 
 The send command copies file from your BeOS system to the SD card of the BlueSCSI.
-You may want to use the -r argument to enable recursive mode if you want to send
-a directory.  If you do not specify a destination, then the name of the file or
+You may want to use the -r or the -f arguments to enable recurse or force mode or both.
+If you do not specify a destination, then the name of the file or
 directory you are sending to the SD card will be written to the current working
-directory of the BlueSCSI
+directory of the BlueSCSI.
 
 ```
 [/boot/home/code/BeBlue]> ./BeBlueCLI working-dir /newdir
@@ -338,23 +346,6 @@ The set-cd command allows you to change to a different CD image on an emulated C
 ```
 [/boot/home/code/BeBlue]> ./BeBlueCLI -d /dev/bus/scsi/0/5/0/raw set-cd "CD5 BeOS_R4_5.iso"
 ```
-
-### wifi-scan
-
-The wifi-scan command should list all available WiFi networks.  But this command does
-not work yet (see Future).
-
-
-### wifi-join
-
-The wifi-join command alows you to connect to a specific WiFi network.  But this
-command does not work yet (see Future).
-
-
-### wifi-info
-
-The wifi-info command shows details about the currently joined WiFi network.  But this
-command does not work yet (see Future).
 
 
 ## Future

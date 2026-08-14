@@ -12,9 +12,13 @@
 #include "cli/Send.h"
 #include "cli/SetCD.h"
 #include "cli/Version.h"
+#if 0
+// Disabled for now because the wifi commands will not work until there
+// is kernel support for the SCSI network interface
 #include "cli/WifiInfo.h"
 #include "cli/WifiJoin.h"
 #include "cli/WifiScan.h"
+#endif
 #include "cli/WorkingDir.h"
 
 
@@ -35,9 +39,11 @@ CommandRegistry::CommandRegistry()
 	commands.AddItem(new Send());
 	commands.AddItem(new CDs());
 	commands.AddItem(new SetCD());
+#if 0
 	commands.AddItem(new WifiScan());
 	commands.AddItem(new WifiJoin());
 	commands.AddItem(new WifiInfo());
+#endif
 }
 
 
