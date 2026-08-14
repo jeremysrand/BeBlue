@@ -5,8 +5,8 @@
 // with each build so that shouldn't need to be updated.
 #define MAJOR_VER 0
 #define MINOR_VER 9
-#define PATCH_VER 7
-#define BUILD_NUM 111
+#define PATCH_VER 8
+#define BUILD_NUM 121
 
 
 // The rest of this shouldn't need to be updated in general and just

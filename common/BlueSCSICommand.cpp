@@ -307,13 +307,8 @@ bool BlueSCSICommand::GetFile(uint8 fileIndex, uint32 blockOffset, char * buffer
 {
 	Log("Getting file index %u at block offset %u into %lu byte buffer", (uint32)fileIndex,
 		blockOffset, bufferSize);
-	if ((bufferSize % BLUE_SCSI_GET_FILE_BLOCK_SIZE) != 0) {
-		RaiseError(FormatError("Buffer size must be a multiple of %u but the size is %lu",
-			(uint32)BLUE_SCSI_GET_FILE_BLOCK_SIZE, bufferSize));
-		return false;
-	}
 	
-	uint32 numBlocks = bufferSize / BLUE_SCSI_GET_FILE_BLOCK_SIZE;
+	uint32 numBlocks = ((bufferSize - 1) / BLUE_SCSI_GET_FILE_BLOCK_SIZE) + 1;
 	if (numBlocks > BLUE_SCSI_FILE_MAX_BLOCKS_PER_TRANSFER) {
 		RaiseError(FormatError("Buffer size was %lu which is %u blocks but max per transfer is %u",
 			bufferSize, numBlocks, (uint32)BLUE_SCSI_FILE_MAX_BLOCKS_PER_TRANSFER));
@@ -475,7 +470,14 @@ bool BlueSCSICommand::StartWifiScan(bool * started)
 {
 	Log("Starting a WiFi scan on the BlueSCSI");
 	uint8 result = 0;
-	uint8 command[] = { BLUE_SCSI_WIFI_CMD, BLUE_SCSI_WIFI_CMD_SCAN, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8 command[] = { \
+		BLUE_SCSI_WIFI_CMD,
+		BLUE_SCSI_WIFI_CMD_SCAN,
+		0x00,
+		0x00,
+		0x01,
+		0x00
+	};
 	if (!ExecuteCommand(command, sizeof(command), &result, sizeof(result)))
 		return false;
 		
@@ -489,7 +491,14 @@ bool BlueSCSICommand::CheckWifiScanComplete(bool * completed)
 {
 	Log("Checking if WiFi scan is complete on the BlueSCSI");
 	uint8 result = 0;
-	uint8 command[] = { BLUE_SCSI_WIFI_CMD, BLUE_SCSI_WIFI_CMD_COMPLETE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8 command[] = {
+		BLUE_SCSI_WIFI_CMD,
+		BLUE_SCSI_WIFI_CMD_COMPLETE,
+		0x00,
+		0x00,
+		0x01,
+		0x00
+	};
 	if (!ExecuteCommand(command, sizeof(command), &result, sizeof(result)))
 		return false;
 		
@@ -502,7 +511,14 @@ bool BlueSCSICommand::CheckWifiScanComplete(bool * completed)
 bool BlueSCSICommand::WifiScanResults(BlueSCSINetworkEntries * result)
 {
 	Log("Getting Wifi scan results from the BlueSCSI");
-	uint8 command[] = { BLUE_SCSI_WIFI_CMD, BLUE_SCSI_WIFI_CMD_SCAN_RESULTS, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8 command[] = {
+		BLUE_SCSI_WIFI_CMD,
+		BLUE_SCSI_WIFI_CMD_SCAN_RESULTS,
+		0x00,
+		(sizeof(*result) >> 8) & 0xff,
+		sizeof(*result) & 0xff,
+		0x00
+	};
 	bool success = ExecuteCommand(command, sizeof(command), result, sizeof(*result));
 	if ((success) && (IsLogging())) {
 		Log("Wifi scan results from the BlueSCSI:");
@@ -530,7 +546,14 @@ bool BlueSCSICommand::WifiScanResults(BlueSCSINetworkEntries * result)
 bool BlueSCSICommand::WifiInfo(BlueSCSINetworkEntry * result)
 {
 	Log("Getting WiFi info from the BlueSCSI");
-	uint8 command[] = { BLUE_SCSI_WIFI_CMD, BLUE_SCSI_WIFI_CMD_INFO, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8 command[] = {
+		BLUE_SCSI_WIFI_CMD,
+		BLUE_SCSI_WIFI_CMD_INFO,
+		0x00,
+		(sizeof(*result) >> 8) & 0xff,
+		sizeof(*result) & 0xff,
+		0x00
+	};
 	bool success = ExecuteCommand(command, sizeof(command), result, sizeof(*result));
 	if ((success) && (IsLogging())) {
 		Log("Wifi info from the BlueSCSI:");
@@ -553,6 +576,13 @@ bool BlueSCSICommand::WifiInfo(BlueSCSINetworkEntry * result)
 bool BlueSCSICommand::WifiJoin(BlueSCSINetworkJoinRequest * request)
 {
 	Log("Joining WiFi SSID \"%s\" at channel %u on the BlueSCSI", request->ssid, (uint32)request->channel);
-	uint8 command[] = { BLUE_SCSI_WIFI_CMD, BLUE_SCSI_WIFI_CMD_JOIN, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	uint8 command[] = {
+		BLUE_SCSI_WIFI_CMD,
+		BLUE_SCSI_WIFI_CMD_JOIN,
+		0x00,
+		(sizeof(*request) >> 8) & 0xff,
+		sizeof(*request) & 0xff,
+		0x00
+	};
 	return ExecuteCommand(command, sizeof(command), request, sizeof(*request));
 }

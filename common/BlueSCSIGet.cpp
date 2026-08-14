@@ -230,24 +230,24 @@ bool BlueSCSIGet::GetFile(const BlueSCSIFileEntry * fileEntry, BEntry * entryArg
 	uint64 bytesLeft = comm.GetFileSize(*fileEntry);
 	uint32 blockOffset = 0;
 	while (bytesLeft > 0) {
-		device.Log("Read %lu bytes from \"%s\" at block offset %u", bufferSize,
+		uint64 bytesToRead = bufferSize;
+		if (bytesToRead > bytesLeft)
+			bytesToRead = bytesLeft;
+		device.Log("Read %Lu bytes from \"%s\" at block offset %u", bytesToRead,
 			fileEntry->name, blockOffset);
-		if (!comm.GetFile(fileEntry->index, blockOffset, buffer, bufferSize)) {
+		if (!comm.GetFile(fileEntry->index, blockOffset, buffer, bytesToRead)) {
 			HandleGetError("Unable to read contents of file");
 			return false;
 		}
-		uint64 bytesRead = bufferSize;
-		if (bytesRead > bytesLeft)
-			bytesRead = bytesLeft;
 		
-		device.Log("Write %Lu byte to destination file", bytesRead);
-		if (destFile.Write(buffer, bytesRead) != bytesRead) {
+		device.Log("Write %Lu byte to destination file", bytesToRead);
+		if (destFile.Write(buffer, bytesToRead) != bytesToRead) {
 			HandleGetError("Unable to write contents to file");
 			return false;
 		}
 		
-		bytesLeft -= bytesRead;
-		blockOffset += (bytesRead / BLUE_SCSI_GET_FILE_BLOCK_SIZE);
+		bytesLeft -= bytesToRead;
+		blockOffset += (bytesToRead / BLUE_SCSI_GET_FILE_BLOCK_SIZE);
 	}
 	device.Log("File get complete");
 	
