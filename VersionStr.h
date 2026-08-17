@@ -5,8 +5,10 @@
 // with each build so that shouldn't need to be updated.
 #define MAJOR_VER 0
 #define MINOR_VER 9
-#define PATCH_VER 8
-#define BUILD_NUM 123
+#define PATCH_VER 9
+#define BUILD_NUM 133
+
+#define BETA_BUILD
 
 
 // The rest of this shouldn't need to be updated in general and just
@@ -22,6 +24,12 @@
 
 #define VERSION_STR MAJOR_VER_STR "." MINOR_VER_STR "." PATCH_VER_STR
 
-#define VERSION_DETAIL "BeBlue v" VERSION_STR " (build " BUILD_NUM_STR ")" 
+#ifdef BETA_BUILD
+#define VERSION_BUILD " (Beta build " BUILD_NUM_STR ")"
+#else
+#define VERSION_BUILD " (Release build)"
+#endif
+
+#define VERSION_DETAIL "BeBlue v" VERSION_STR VERSION_BUILD
 
 #endif
