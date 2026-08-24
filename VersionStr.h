@@ -3,12 +3,12 @@
 
 // Modify these as required.  Note that BUILD_NUM is auto-incremented
 // with each build so that shouldn't need to be updated.
-#define MAJOR_VER 0
-#define MINOR_VER 9
-#define PATCH_VER 9
-#define BUILD_NUM 133
+#define MAJOR_VER 1
+#define MINOR_VER 0
+#define PATCH_VER 0
+#define BUILD_NUM 135
 
-#define BETA_BUILD
+#undef BETA_BUILD
 
 
 // The rest of this shouldn't need to be updated in general and just

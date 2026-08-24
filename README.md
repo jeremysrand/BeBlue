@@ -353,3 +353,12 @@ The set-cd command allows you to change to a different CD image on an emulated C
 In the future, I would like to add support for:
 * A GUI with support for drag and drop to make file operations easy.
 * WiFi network support.  I have already written the code to scan for WiFi networks and join them.  What I need to do to actually support this is write a kernel driver for the packet interface.
+
+
+## Credits
+
+Chris Rupnik was key to the existence of this project.  He loaned me a BlueSCSI
+to test with and encouraged me to work on this.  Chris performed testing on
+a PowerMac running BeOS 5 and provided lots of logs which helped me to
+fix several bugs.  If not for Chris, this project would not exist.  Thanks
+Chris!
