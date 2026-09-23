@@ -1,5 +1,6 @@
 #!/bin/sh
 
+cd `dirname "$0"`
 BUILD_NUM=`grep '^#define BUILD_NUM ' < VersionStr.h | sed 's/^#define BUILD_NUM //'`
 BUILD_NUM=`expr $BUILD_NUM + 1`
 
