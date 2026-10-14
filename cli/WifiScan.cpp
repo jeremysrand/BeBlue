@@ -79,18 +79,18 @@ int WifiScan::Execute()
 	}
 	
 	printf("\n");
-	printf("+-----------------------------------------------------------------+\n");
-	printf("| %-5s| %-5s| %-5s| %-13s| %-65s|\n", "Chan", "RSSI", "Auth", "BSSID", "SSID");
-	printf("|-----------------------------------------------------------------|\n");
+	printf("+-----------------------------------------------------------------------------------------------------------+\n");
+	printf("| %-5s| %-5s| %-5s| %-18s| %-65s|\n", "Chan", "RSSI", "Auth", "BSSID", "SSID");
+	printf("|-----------------------------------------------------------------------------------------------------------|\n");
 	
 	for (int i = 0; i < BLUE_SCSI_NUM_NETWORK_ENTRIES; i++) {
 		BlueSCSINetworkEntry * entry = &(result.entries[i]);
 		if (strlen(entry->ssid) == 0)
 			continue;
 		
-		printf("| %-5u| %-5u| %-5s| %02x:%02x:%02x:%02x:%02x:%02x | %-65s|\n",
+		printf("| %-5u| %-5d| %-5s| %02x:%02x:%02x:%02x:%02x:%02x | %-65s|\n",
 			entry->channel,
-			entry->rssi,
+			(int)entry->rssi,
 			((entry->flags & BLUE_SCSI_NETWORK_FLAG_AUTH) != 0 ? "Yes" : "No"),
 			entry->bssid[0],
 			entry->bssid[1],
@@ -100,8 +100,7 @@ int WifiScan::Execute()
 			entry->bssid[5],
 			entry->ssid);
 	}
-	printf("+-----------------------------------------------------------------+\n");
-	
+	printf("+-----------------------------------------------------------------------------------------------------------+\n");
 	
 	return 0;
 }

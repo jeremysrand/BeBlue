@@ -66,7 +66,7 @@ struct BlueSCSIListDevsResult {
 
 struct BlueSCSINetworkEntry {
 	char ssid[BLUE_SCSI_SSID_LEN];
-	char bssid[BLUE_SCSI_BSSID_LEN];
+	uint8 bssid[BLUE_SCSI_BSSID_LEN];
 	int8 rssi;
 	uint8 channel;
 	uint8 flags;
@@ -74,7 +74,15 @@ struct BlueSCSINetworkEntry {
 };
 
 struct BlueSCSINetworkEntries {
+	uint8 sizeHigh;
+	uint8 sizeLow;
 	BlueSCSINetworkEntry entries[BLUE_SCSI_NUM_NETWORK_ENTRIES];
+};
+
+struct BlueSCSIWifiInfo {
+	uint8 sizeHigh;
+	uint8 sizeLow;
+	BlueSCSINetworkEntry entry;
 };
 
 struct BlueSCSINetworkJoinRequest {
@@ -128,7 +136,7 @@ class BlueSCSICommand : public SCSICommand {
 		bool StartWifiScan(bool * started);
 		bool CheckWifiScanComplete(bool * completed);
 		bool WifiScanResults(BlueSCSINetworkEntries * result);
-		bool WifiInfo(BlueSCSINetworkEntry * result);
+		bool WifiInfo(BlueSCSIWifiInfo * result);
 		bool WifiJoin(BlueSCSINetworkJoinRequest * request);
 		
 	private:

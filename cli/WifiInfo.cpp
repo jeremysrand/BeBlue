@@ -42,25 +42,25 @@ int WifiInfo::Execute()
 	BlueSCSIDevice & device = globalOpts->Device();
 	BlueSCSICommand & comm = device.Command();
 	
-	BlueSCSINetworkEntry entry;
-	if (!comm.WifiInfo(&entry)) {
+	BlueSCSIWifiInfo wifiInfo;
+	if (!comm.WifiInfo(&wifiInfo)) {
 		if (comm.HasError())
 			fprintf(stderr, "ERROR: %s\n", comm.GetErrorStr());
 		return -1;
 	}
 	
 	printf("Wifi info output from %s:\n", device.PathString());
-	printf("  Channel: %u\n", entry.channel);
-	printf("  SSID:    \"%s\"\n", entry.ssid);
+	printf("  Channel: %u\n", wifiInfo.entry.channel);
+	printf("  SSID:    \"%s\"\n", wifiInfo.entry.ssid);
 	printf("  BSSID:   %02x:%02x:%02x:%02x:%02x:%02x\n",
-		entry.bssid[0],
-		entry.bssid[1],
-		entry.bssid[2],
-		entry.bssid[3],
-		entry.bssid[4],
-		entry.bssid[5]);
-	printf("  RSSI:    %u\n", entry.rssi);
-	printf("  Auth:    %s\n", ((entry.flags & BLUE_SCSI_NETWORK_FLAG_AUTH) != 0 ? "Yes" : "No"));
+		wifiInfo.entry.bssid[0],
+		wifiInfo.entry.bssid[1],
+		wifiInfo.entry.bssid[2],
+		wifiInfo.entry.bssid[3],
+		wifiInfo.entry.bssid[4],
+		wifiInfo.entry.bssid[5]);
+	printf("  RSSI:    %d\n", (int)wifiInfo.entry.rssi);
+	printf("  Auth:    %s\n", ((wifiInfo.entry.flags & BLUE_SCSI_NETWORK_FLAG_AUTH) != 0 ? "Yes" : "No"));
 	
 	return 0;
 }

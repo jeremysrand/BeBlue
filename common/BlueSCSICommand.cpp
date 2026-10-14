@@ -82,6 +82,14 @@ bool BlueSCSICommand::IsBlueSCSIInquiry(SCSIInquiryResult * result)
 	bool isBlueSCSI = 
 		(strncmp(result->vendorInfoStr, BLUE_SCSI_VENDOR_INFO, BLUE_SCSI_VENDOR_INFO_LEN) == 0);
     
+    // Special case for an emulated DaynaPort.  The vendor info does not seem to be
+    // present.  So, if the vendor is Dayna and vendor info is empty, then assume it is
+    // a BlueSCSI.  The mode sense will verify
+    if ((!isBlueSCSI) &&
+        (*(result->vendorInfoStr) == '\0') &&
+        (strcmp(result->vendorStr, "Dayna") == 0))
+        isBlueSCSI = true;
+    
     Log("Device is %sa BlueSCSI from Inquiry result", (isBlueSCSI ? "" : "not "));
     
     return isBlueSCSI;
@@ -511,12 +519,15 @@ bool BlueSCSICommand::CheckWifiScanComplete(bool * completed)
 bool BlueSCSICommand::WifiScanResults(BlueSCSINetworkEntries * result)
 {
 	Log("Getting Wifi scan results from the BlueSCSI");
+	Log("  sizeof(*result) = %u", sizeof(*result));
+	
+	size_t resultSize = sizeof(*result);
 	uint8 command[] = {
 		BLUE_SCSI_WIFI_CMD,
 		BLUE_SCSI_WIFI_CMD_SCAN_RESULTS,
 		0x00,
-		(sizeof(*result) >> 8) & 0xff,
-		sizeof(*result) & 0xff,
+		(resultSize >> 8) & 0xff,
+		resultSize & 0xff,
 		0x00
 	};
 	bool success = ExecuteCommand(command, sizeof(command), result, sizeof(*result));
@@ -526,9 +537,9 @@ bool BlueSCSICommand::WifiScanResults(BlueSCSINetworkEntries * result)
 			BlueSCSINetworkEntry * entry = &(result->entries[i]);
 			if (strlen(entry->ssid) == 0)
 				continue;
-			Log("  Chan=%2u  RSSI=%u  AUTH=%s  BSSID=%02x:%02x:%02x:%02x:%02x:%02x  SSID=%s",
+			Log("  Chan=%2u  RSSI=%d  AUTH=%s  BSSID=%02x:%02x:%02x:%02x:%02x:%02x  SSID=%s",
 				entry->channel,
-				entry->rssi,
+				(int)entry->rssi,
 				((entry->flags & BLUE_SCSI_NETWORK_FLAG_AUTH) != 0 ? "Yes" : "No "),
 				entry->bssid[0],
 				entry->bssid[1],
@@ -538,12 +549,17 @@ bool BlueSCSICommand::WifiScanResults(BlueSCSINetworkEntries * result)
 				entry->bssid[5],
 				entry->ssid);
 		}
+		
+		uint8 * ptr = (uint8 *) result;
+		for (int i = 0; i < resultSize; i++) {
+			Log("  ptr[%04d] = %u  %c", i, ptr[i], (isprint(ptr[i]) ? ptr[i] : '.'));
+		}
 	}
 	return success;
 }
 
 
-bool BlueSCSICommand::WifiInfo(BlueSCSINetworkEntry * result)
+bool BlueSCSICommand::WifiInfo(BlueSCSIWifiInfo * result)
 {
 	Log("Getting WiFi info from the BlueSCSI");
 	uint8 command[] = {
@@ -557,17 +573,17 @@ bool BlueSCSICommand::WifiInfo(BlueSCSINetworkEntry * result)
 	bool success = ExecuteCommand(command, sizeof(command), result, sizeof(*result));
 	if ((success) && (IsLogging())) {
 		Log("Wifi info from the BlueSCSI:");
-		Log("  Channel: %u\n", result->channel);
-		Log("  SSID:    \"%s\"\n", result->ssid);
+		Log("  Channel: %u\n", result->entry.channel);
+		Log("  SSID:    \"%s\"\n", result->entry.ssid);
 		Log("  BSSID:   %02x:%02x:%02x:%02x:%02x:%02x\n",
-			result->bssid[0],
-			result->bssid[1],
-			result->bssid[2],
-			result->bssid[3],
-			result->bssid[4],
-			result->bssid[5]);
-		Log("  RSSI:    %u\n", result->rssi);
-		Log("  Auth:    %s\n", ((result->flags & BLUE_SCSI_NETWORK_FLAG_AUTH) != 0 ? "Yes" : "No"));
+			result->entry.bssid[0],
+			result->entry.bssid[1],
+			result->entry.bssid[2],
+			result->entry.bssid[3],
+			result->entry.bssid[4],
+			result->entry.bssid[5]);
+		Log("  RSSI:    %d\n", (int)result->entry.rssi);
+		Log("  Auth:    %s\n", ((result->entry.flags & BLUE_SCSI_NETWORK_FLAG_AUTH) != 0 ? "Yes" : "No"));
 	}
 	return success;
 }
