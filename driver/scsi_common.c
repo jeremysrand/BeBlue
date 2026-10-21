@@ -23,41 +23,76 @@
 #include "scsi_common.h"
 
 
-/* used by scsi_dsk too, cannot be static */
-
-int decode_scsi_ptl(char *name, int *path, int *targ, int *lun)
-{
-	*path = 0;
-	*targ = 0;
-	*lun = 0;
-
-	while(isdigit(*name)) {
-		*path = (*path) * 10 + (*name - '0');
-		name++;
-	}
-	if(*name != '/') return 1;
-	name++;
-		
-	while(isdigit(*name)) {
-		*targ = (*targ) * 10 + (*name - '0');
-		name++;
-	}
-	if(*name != '/') return 1;
-	name++;
-
-	while(isdigit(*name)) {
-		*lun = (*lun) * 10 + (*name - '0');
-		name++;
-	}
-	if(*name != '/') return 1;
-
-	return 0;
-}
-
- 
+// Defines
 
 #define LOCKED_DATA   0x01
 #define LOCKED_SENSE  0x02
+
+
+// Implementation
+
+
+int decode_scsi_ptl(const char *name, int *bus, int *targ, int *lun)
+{
+	dprintf("Dayna: Parsing device name \"%s\"\n", name);
+	
+	*bus = 0;
+	*targ = 0;
+	*lun = 0;
+
+	int len = strlen(name);
+	if (len == 0) {
+		dprintf("Dayna: Device name is empty string\n");
+		return 1;
+	}
+	
+	const char * ptr = &name[len - 1];
+	// Find the last slash in the device name
+	while ((ptr >= name) && (*ptr != '/'))
+		ptr--;
+		
+	if (ptr < name) {
+		dprintf("Dayna: Unable to find last slash in device name\n");
+		return 1;
+	}
+	
+	ptr++;
+	dprintf("Dayna: Parsing \"%s\"\n", ptr);
+	
+	while (isdigit(*ptr)) {
+		*bus = (*bus) * 10 + (*ptr - '0');
+		ptr++;
+	}
+	if (*ptr != '_') {
+		dprintf("Dayna: Unable to find underscore between bus and target\n");
+		return 1;
+	}
+	ptr++;
+		
+	while (isdigit(*ptr)) {
+		*targ = (*targ) * 10 + (*ptr - '0');
+		ptr++;
+	}
+	if (*ptr != '_') {
+		dprintf("Dayna: Unable to find underscore between target and lun\n");
+		return 1;
+	}
+	ptr++;
+
+	while(isdigit(*ptr)) {
+		*lun = (*lun) * 10 + (*ptr - '0');
+		ptr++;
+	}
+	if (*ptr != '\0') {
+		dprintf("Dayna: No null terminator found after lun\n");
+		return 1;
+	}
+	
+	dprintf("Dayna: Parsed into bus=%d, target=%d, lun=%d\n", *bus, *targ, *lun);
+	
+	return 0;
+}
+
 
 status_t 
 do_raw_command(cam_for_driver_module_info *cam,

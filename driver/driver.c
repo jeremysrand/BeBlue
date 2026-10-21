@@ -9,18 +9,22 @@
 #include <Drivers.h>
 #include <Errors.h>
 
+#include "devices.h"
 #include "scsi_common.h"
+
+#define DEVICE_TYPE_CPU 3
 
 static cam_for_driver_module_info	*cam;
 static const char cam_name[] = B_CAM_FOR_DRIVER_MODULE_NAME;
 
 
-typedef struct
+typedef struct tDevice
 {
-	int path;
+	int bus;
 	int target;
 	int lun;
-}  raw_scsi;
+}  tDevice;
+
 
 static int daynaHello(int argc, char *argv[])
 {
@@ -34,7 +38,7 @@ static int daynaHello(int argc, char *argv[])
 status_t
 init_hardware (void)
 {
-	kprintf("In init_hardware() for my driver, " VERSION_DETAIL "\n");
+	dprintf("Dayna: In init_hardware() for my driver, " VERSION_DETAIL "\n");
 	return B_OK;
 }
 
@@ -46,9 +50,9 @@ init_hardware (void)
 status_t
 init_driver (void)
 {
-	kprintf("In init_driver() for my driver\n");
+	dprintf("Dayna: In init_driver() for my driver\n");
 	int rc = add_debugger_command("daynaHello", daynaHello, "Say hello world");
-	kprintf("add_debugger_command() = %d\n", rc);
+	dprintf("Dayna: add_debugger_command() = %d\n", rc);
 	
 	if(get_module(cam_name, (module_info **)&cam) != B_OK)
 		return B_ERROR;
@@ -64,10 +68,11 @@ init_driver (void)
 void
 uninit_driver (void)
 {
-	kprintf("In uninit_driver() for my driver\n");
+	dprintf("Dayna: In uninit_driver() for my driver\n");
 	int rc = remove_debugger_command("daynaHello", daynaHello);
-	kprintf("remove_debugger_command() = %d\n", rc);
+	dprintf("Dayna: remove_debugger_command() = %d\n", rc);
 	
+	free_devices();
 	put_module(cam_name);
 }
 
@@ -79,30 +84,23 @@ uninit_driver (void)
 static status_t
 my_device_open (const char *name, uint32 flags, void** c)
 {
-	kprintf("In my_device_open(%s, %u, %p) for my driver\n", name, flags,
+	dprintf("Dayna: In my_device_open(%s, %u, %p) for my driver\n", name, flags,
 		c);
 		
-	raw_scsi **cookie = (raw_scsi **) c;
-	raw_scsi *d = NULL;     /* -> sci info */
-	int	retval = -1;        /* assume failure */
+	tDevice **cookie = (tDevice **) c;
+		
+	tDevice * device = (tDevice *)malloc(sizeof(tDevice));
+	if (device == NULL)
+		return -1;
 	
-	/* set up private data for this particular device */
-	if (!(d = (raw_scsi *) malloc (sizeof(raw_scsi)))) {
-		goto exit;
+	if (decode_scsi_ptl(name, &(device->bus), &(device->target), &device->lun) != 0) {
+		dprintf("Dayna: Failed to parse the device name");
+		free(device);
+		return -1;
 	}
-
-	/* bus/scsi/ is 9 characters... */
-	if(decode_scsi_ptl((char *) (name + 9), &(d->path), &(d->target), &(d->lun))) {
-		goto exit;
-	}
-	retval = 0;
-	*cookie = d;
-
-exit:
-	if (d && retval)
-		free (d);
-
-	return retval;
+	
+	*cookie = device;
+	return 0;
 }
 
 
@@ -113,7 +111,7 @@ exit:
 static status_t
 my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes)
 {
-	kprintf("In my_device_read(%p, %Ld, %p, %p) for my driver\n", cookie,
+	dprintf("Dayna: In my_device_read(%p, %Ld, %p, %p) for my driver\n", cookie,
 		position, buf, num_bytes);
 	*num_bytes = 0;				/* tell caller nothing was read */
 	return B_ERROR;
@@ -127,7 +125,7 @@ my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes)
 static status_t
 my_device_write (void* cookie, off_t position, const void* buffer, size_t* num_bytes)
 {
-	kprintf("In my_device_write(%p, %Ld, %p, %p) for my driver\n", cookie,
+	dprintf("Dayna: In my_device_write(%p, %Ld, %p, %p) for my driver\n", cookie,
 		position, buffer, num_bytes);
 	*num_bytes = 0;				/* tell caller nothing was written */
 	return B_ERROR;
@@ -141,16 +139,16 @@ my_device_write (void* cookie, off_t position, const void* buffer, size_t* num_b
 static status_t
 my_device_control (void* cookie, uint32 op, void* arg, size_t len)
 {
-	kprintf("In my_device_control(%p, %u, %p, %u) for my driver\n", cookie,
+	dprintf("Dayna: In my_device_control(%p, %u, %p, %u) for my driver\n", cookie,
 		op, arg, len);
-	raw_scsi *d = (raw_scsi *) cookie;
-	raw_device_command *rdc = (raw_device_command *) arg;
+	tDevice * device = (tDevice *) cookie;
 	
-	if (op != B_RAW_DEVICE_COMMAND){
-		return B_DEV_INVALID_IOCTL;
+	if (op == B_RAW_DEVICE_COMMAND){
+		raw_device_command *rdc = (raw_device_command *) arg;
+		return do_raw_command(cam, rdc, device->bus, device->target, device->lun);
 	}
+	return B_DEV_INVALID_IOCTL;
 
-	return do_raw_command(cam, rdc, d->path, d->target, d->lun);
 }
 
 
@@ -161,7 +159,7 @@ my_device_control (void* cookie, uint32 op, void* arg, size_t len)
 static status_t
 my_device_close (void* cookie)
 {
-	kprintf("In my_device_close(%p) for my driver\n", cookie);
+	dprintf("Dayna: In my_device_close(%p) for my driver\n", cookie);
 	return B_OK;
 }
 
@@ -173,19 +171,11 @@ my_device_close (void* cookie)
 static status_t
 my_device_free (void* cookie)
 {
-	kprintf("In my_device_free(%p) for my driver\n", cookie);
+	dprintf("Dayna: In my_device_free(%p) for my driver\n", cookie);
+	tDevice * device = (tDevice *) cookie;
+	free(device);
 	return B_OK;
 }
-
-
-/* -----
-	null-terminated array of device names supported by this driver
------ */
-
-static const char *my_device_name[] = {
-	"bus/scsi/0/4/0/raw",
-	NULL
-};
 
 /* -----
 	function pointers for the device hooks entry points
@@ -200,6 +190,21 @@ device_hooks my_device_hooks = {
 	my_device_write			/* -> write entry point */
 };
 
+
+static int
+get_max_path (CCB_HEADER *ccbh)
+{
+	uchar max_path;
+
+	ccbh->cam_func_code = XPT_PATH_INQ;
+	ccbh->cam_path_id = 0xFF;	/* return only highest path id */
+	(*cam->xpt_action) (ccbh);		/* do path inquiry */
+	if (ccbh->cam_status != CAM_REQ_CMP)
+		return -1;
+	max_path = ((CCB_PATHINQ *)ccbh)->cam_hpath_id;
+	return (max_path == 0xFF) ? -1 : max_path;
+}
+
 /* ----------
 	publish_devices - return a null-terminated array of devices
 	supported by this driver.
@@ -208,8 +213,51 @@ device_hooks my_device_hooks = {
 _EXPORT const char**
 publish_devices()
 {
-	kprintf("In publish_devices() for my driver\n");
-	return my_device_name;
+	char		tmp[64];
+	CCB_HEADER	*ccbh;				/* -> ccb */
+	int			path, targ, lun;	/* path, target, lun ids */
+	int			max_path;			/* highest known path id */
+	int         instance = 0;
+	
+	free_devices();
+	cam->minfo.rescan();
+	
+	if (!(ccbh = (*cam->xpt_ccb_alloc)())){
+		return NULL;
+	}
+
+	if ((max_path = get_max_path (ccbh)) < 0) { /* get highest path id */
+		(*cam->xpt_ccb_free) (ccbh);
+		return NULL;
+	}
+
+
+	ccbh->cam_func_code = XPT_GDEV_TYPE;
+    ((CCB_GETDEV *)ccbh)->cam_inq_data = NULL;
+
+	/* for each path id, look for disks */
+	for (path = 0; path <= max_path ; path++) {
+		ccbh->cam_path_id = path;
+		for (targ = 0; targ < 16; targ++) {
+			ccbh->cam_target_id = targ;
+			for (lun = 0; lun < 8; lun++) {
+				ccbh->cam_target_lun = lun;
+				(*cam->xpt_action)(ccbh);	/* do get_device_type */
+				if (ccbh->cam_status != CAM_REQ_CMP)
+					continue;
+				if (((CCB_GETDEV *)ccbh)->cam_pd_type != DEVICE_TYPE_CPU)
+					continue;
+					
+				// JSR_TODO - Do an inquiry here and confirm that the vendor
+				// is "Dayna" and the device is "SCSI/Link"
+				add_device(path, targ, lun);
+			}
+		}
+	}
+
+	(*cam->xpt_ccb_free) (ccbh);
+
+	return get_device_names();
 }
 
 /* ----------
@@ -220,7 +268,7 @@ publish_devices()
 _EXPORT device_hooks*
 find_device(const char* name)
 {
-	kprintf("In find_device(%s) for my driver\n", name);
+	dprintf("Dayna: In find_device(%s) for my driver\n", name);
 	return &my_device_hooks;
 }
 
