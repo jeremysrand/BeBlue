@@ -4,6 +4,7 @@
 #include <KernelExport.h>
 
 #include "devices.h"
+#include "scsi_common.h"
 
 
 // Defines
@@ -18,6 +19,7 @@ typedef struct tDeviceListElem {
 	char name[DEVICE_NAME_MAX_LEN];
 	struct tDeviceListElem * next;
 } tDeviceListElem;
+
 
 // Globals
 
@@ -55,13 +57,13 @@ void free_devices(void)
 }
 
 
-void add_device(int bus, int target, int lun)
+void add_device(tDeviceId * id)
 {
 	tDeviceListElem * device_list_elem = (tDeviceListElem *)malloc(sizeof(tDeviceListElem));
 	if (device_list_elem == NULL)
 		return;
 		
-	sprintf(device_list_elem->name, DEVICE_NAME_PREFIX "%d_%d_%d", bus, target, lun);
+	sprintf(device_list_elem->name, DEVICE_NAME_PREFIX "%d_%d_%d", id->bus, id->target, id->lun);
 	num_devices++;
 	
 	dprintf("Dayna: Added device %s\n", device_list_elem->name);

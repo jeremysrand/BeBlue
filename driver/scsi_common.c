@@ -28,17 +28,39 @@
 #define LOCKED_DATA   0x01
 #define LOCKED_SENSE  0x02
 
+#define SCSI_TIMEOUT 1000000
+
+#define SCSI_INQUIRY 0x12
+#define SCSI_INQ_TYPE_MASK 0x1f
+#define SCSI_INQ_TYPE_OFFSET 0
+#define SCSI_INQ_SCSI_VERSION_OFFSET 2
+#define SCSI_INQ_VENDOR_STR_OFFSET 8
+#define SCSI_INQ_DEVICE_STR_OFFSET 16
+#define SCSI_INQ_VERSION_STR_OFFSET 32
+#define SCSI_INQ_VENDOR_INFO_STR_OFFSET 36
+#define SCSI_INQ_LEN 56
+
+#define DAYNA_VENDOR_STR "Dayna"
+#define DAYNA_VENDOR_STR_LEN 5
+#define DAYNA_DEVICE_STR "SCSI/Link"
+#define DAYNA_DEVICE_STR_LEN 9
+
+#define SCSI_GET_STATS 0x09
+#define SCSI_STATS_LEN 18
+
+#define MAC_ADDR_LEN 6
+
 
 // Implementation
 
 
-int decode_scsi_ptl(const char *name, int *bus, int *targ, int *lun)
+int decode_scsi_ptl(const char *name, tDeviceId * id)
 {
 	dprintf("Dayna: Parsing device name \"%s\"\n", name);
 	
-	*bus = 0;
-	*targ = 0;
-	*lun = 0;
+	id->bus = 0;
+	id->target = 0;
+	id->lun = 0;
 
 	int len = strlen(name);
 	if (len == 0) {
@@ -60,7 +82,7 @@ int decode_scsi_ptl(const char *name, int *bus, int *targ, int *lun)
 	dprintf("Dayna: Parsing \"%s\"\n", ptr);
 	
 	while (isdigit(*ptr)) {
-		*bus = (*bus) * 10 + (*ptr - '0');
+		id->bus = (id->bus) * 10 + (*ptr - '0');
 		ptr++;
 	}
 	if (*ptr != '_') {
@@ -70,7 +92,7 @@ int decode_scsi_ptl(const char *name, int *bus, int *targ, int *lun)
 	ptr++;
 		
 	while (isdigit(*ptr)) {
-		*targ = (*targ) * 10 + (*ptr - '0');
+		id->target = (id->target) * 10 + (*ptr - '0');
 		ptr++;
 	}
 	if (*ptr != '_') {
@@ -80,7 +102,7 @@ int decode_scsi_ptl(const char *name, int *bus, int *targ, int *lun)
 	ptr++;
 
 	while(isdigit(*ptr)) {
-		*lun = (*lun) * 10 + (*ptr - '0');
+		id->lun = (id->lun) * 10 + (*ptr - '0');
 		ptr++;
 	}
 	if (*ptr != '\0') {
@@ -88,7 +110,7 @@ int decode_scsi_ptl(const char *name, int *bus, int *targ, int *lun)
 		return 1;
 	}
 	
-	dprintf("Dayna: Parsed into bus=%d, target=%d, lun=%d\n", *bus, *targ, *lun);
+	dprintf("Dayna: Parsed into bus=%d, target=%d, lun=%d\n", id->bus, id->target, id->lun);
 	
 	return 0;
 }
@@ -96,7 +118,7 @@ int decode_scsi_ptl(const char *name, int *bus, int *targ, int *lun)
 
 status_t 
 do_raw_command(cam_for_driver_module_info *cam,
-			   raw_device_command *rdc, uint path, uint targ, uint lun)
+			   raw_device_command *rdc, tDeviceId * id)
 {
 	CCB_HEADER *ccbh = NULL;
 	CCB_SCSIIO *ccb;
@@ -138,9 +160,9 @@ do_raw_command(cam_for_driver_module_info *cam,
 		goto drc_exit;
 	}
 	
-	ccbh->cam_path_id = path;
-	ccbh->cam_target_id = targ;
-	ccbh->cam_target_lun = lun;
+	ccbh->cam_path_id = id->bus;
+	ccbh->cam_target_id = id->target;
+	ccbh->cam_target_lun = id->lun;
 	ccbh->cam_flags = ((rdc->flags & B_RAW_DEVICE_DATA_IN) ? CAM_DIR_IN : CAM_DIR_OUT );
 
 	ccb = (CCB_SCSIIO *) ccbh;
@@ -176,5 +198,97 @@ drc_exit:
 	}
 	return result;
 }
- 
 
+
+status_t execute_command(cam_for_driver_module_info *cam, tDeviceId * id,
+	uint8 * command, uint8 commandLen, void * data, size_t dataLen)
+{
+	raw_device_command rdc;
+	
+	rdc.data = data;
+	rdc.data_length = dataLen;
+	rdc.sense_data = NULL;
+	rdc.sense_data_length = 0;
+	rdc.timeout = SCSI_TIMEOUT;
+	rdc.flags = B_RAW_DEVICE_DATA_IN;
+	rdc.command_length = commandLen;
+	
+	if (commandLen > sizeof(rdc.command)) {
+		dprintf("Dayna: Comand length too long, len=%u, max=%u\n", (uint32)commandLen, (uint32)sizeof(rdc.command));
+		return B_ERROR;
+	}
+	memcpy(rdc.command, command, commandLen);
+	
+	if (do_raw_command(cam, &rdc, id) != B_OK) {
+		dprintf("Dayna: Command execution failed\n");
+		return B_ERROR;
+	}
+	
+	if (rdc.cam_status != CAM_REQ_CMP) {
+		dprintf("Dayna: Expected CAM status %u but got %u\n", (uint32)CAM_REQ_CMP, (uint32)rdc.cam_status);
+		return B_ERROR;
+	}
+	
+	if (rdc.scsi_status != 0) {
+		dprintf("Dayna: Expected SCSI status 0 but got %u", (uint32)rdc.scsi_status);
+		return B_ERROR;
+	}
+	
+	return B_OK;
+}
+
+ 
+int is_dayna_port(cam_for_driver_module_info *cam, tDeviceId * id)
+{
+	uint8 data[SCSI_INQ_LEN];
+	uint8 command[] = { SCSI_INQUIRY, 0x00, 0x00, 0x00, sizeof(data), 0x00 };
+	if (execute_command(cam, id, command, sizeof(command), data, sizeof(data)) != B_OK) {
+		dprintf("Dayna: Inquiry command failed\n");
+		return 0;
+	}
+	
+	uint8 type = data[SCSI_INQ_TYPE_OFFSET] & SCSI_INQ_TYPE_MASK;
+	if (type != SCSI_DEVICE_TYPE_CPU) {
+		dprintf("Dayna: Expected device type %u but got %u\n", (uint32)SCSI_DEVICE_TYPE_CPU,
+			(uint32)type);
+		return 0;
+	}
+	
+	if (strncmp((char *)&(data[SCSI_INQ_VENDOR_STR_OFFSET]), DAYNA_VENDOR_STR, DAYNA_VENDOR_STR_LEN) != 0) {
+		dprintf("Dayna: Expected vendor to be \"%s\" but got \"%s\"\n", DAYNA_VENDOR_STR, &(data[SCSI_INQ_VENDOR_STR_OFFSET]));
+		return 0;
+	}
+	
+	if (strncmp((char *)&(data[SCSI_INQ_DEVICE_STR_OFFSET]), DAYNA_DEVICE_STR, DAYNA_DEVICE_STR_LEN) != 0) {
+		dprintf("Dayna: Expected device to be \"%s\" but got \"%s\"\n", DAYNA_DEVICE_STR, &(data[SCSI_INQ_DEVICE_STR_OFFSET]));
+		return 0;
+	}
+	
+	dprintf("Dayna: Device is a Dayna SCSI/Link based on inquiry\n");
+	return 1;
+}
+
+status_t get_mac_addr(cam_for_driver_module_info *cam, tDeviceId * id,
+	uint8 * buf)
+{
+	uint8 data[SCSI_STATS_LEN];
+	uint8 command[] = { SCSI_GET_STATS, 0x00, 0x00, 0x00, sizeof(data), 0x00 };
+	if (execute_command(cam, id, command, sizeof(command), data, sizeof(data)) != B_OK) {
+		dprintf("Dayna: Get stats command failed\n");
+		return B_ERROR;
+	}
+	
+	memcpy(buf, data, MAC_ADDR_LEN);
+	dprintf("Dayna: Returning MAC addr %02x:%02x:%02x:%02x:%02x:%02x\n",
+		(uint32)data[0], (uint32)data[1], (uint32)data[2], (uint32)data[3],
+		(uint32)data[4], (uint32)data[5]); 
+	return B_OK;
+}
+
+
+status_t do_multi(cam_for_driver_module_info *cam, tDeviceId * id,
+	char * addr)
+{
+	// JSR_TODO - Write this code...
+	return B_ERROR;
+}

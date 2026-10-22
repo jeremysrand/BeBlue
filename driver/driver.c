@@ -12,19 +12,39 @@
 #include "devices.h"
 #include "scsi_common.h"
 
-#define DEVICE_TYPE_CPU 3
+
+// Defines
+
+#define MAX_TARGET 16
+#define MAX_LUN 8
+
+
+// Types
+
+enum {
+	ETHER_GETADDR = B_DEVICE_OP_CODES_END,	/* get ethernet address */
+	ETHER_INIT,								/* set irq and port */
+	ETHER_NONBLOCK,							/* set/unset nonblocking mode */
+	ETHER_ADDMULTI,							/* add multicast addr */
+	ETHER_REMMULTI,							/* rem multicast addr */
+	ETHER_SETPROMISC,						/* set promiscuous */
+	ETHER_GETFRAMESIZE						/* get frame size */
+};
+
+typedef struct tDevice
+{
+	tDeviceId id;
+	int nonblocking;
+}  tDevice;
+
+
+// Gobals
 
 static cam_for_driver_module_info	*cam;
 static const char cam_name[] = B_CAM_FOR_DRIVER_MODULE_NAME;
 
 
-typedef struct tDevice
-{
-	int bus;
-	int target;
-	int lun;
-}  tDevice;
-
+// Implementation
 
 static int daynaHello(int argc, char *argv[])
 {
@@ -50,7 +70,7 @@ init_hardware (void)
 status_t
 init_driver (void)
 {
-	dprintf("Dayna: In init_driver() for my driver\n");
+	dprintf("Dayna: In init_driver() for my driver, " VERSION_DETAIL "\n");
 	int rc = add_debugger_command("daynaHello", daynaHello, "Say hello world");
 	dprintf("Dayna: add_debugger_command() = %d\n", rc);
 	
@@ -93,11 +113,13 @@ my_device_open (const char *name, uint32 flags, void** c)
 	if (device == NULL)
 		return -1;
 	
-	if (decode_scsi_ptl(name, &(device->bus), &(device->target), &device->lun) != 0) {
+	if (decode_scsi_ptl(name, &(device->id)) != 0) {
 		dprintf("Dayna: Failed to parse the device name");
 		free(device);
 		return -1;
 	}
+	
+	device->nonblocking = 0;
 	
 	*cookie = device;
 	return 0;
@@ -142,10 +164,43 @@ my_device_control (void* cookie, uint32 op, void* arg, size_t len)
 	dprintf("Dayna: In my_device_control(%p, %u, %p, %u) for my driver\n", cookie,
 		op, arg, len);
 	tDevice * device = (tDevice *) cookie;
+	if (device == NULL)
+		return B_ERROR;
 	
-	if (op == B_RAW_DEVICE_COMMAND){
+	switch (op) {
+	case B_RAW_DEVICE_COMMAND:
+		 if (arg == NULL)
+		 	return B_ERROR;
+		 	
+		dprintf("Dayna: Execute raw command\n");
 		raw_device_command *rdc = (raw_device_command *) arg;
-		return do_raw_command(cam, rdc, device->bus, device->target, device->lun);
+		return do_raw_command(cam, rdc, &(device->id));
+		
+	case ETHER_INIT:
+		dprintf("Dayna: ETHER_INIT, nothing to do\n");
+		return B_NO_ERROR;
+
+	case ETHER_GETADDR:
+		if (arg == NULL)
+			return (B_ERROR);
+		
+		dprintf("Dayna: GET_ADDR\n");
+		return get_mac_addr(cam, &(device->id), (uint8 *)arg);
+
+	case ETHER_NONBLOCK:
+		if (arg == NULL)
+			return B_ERROR;
+		
+		memcpy(&device->nonblocking, arg, sizeof(device->nonblocking));
+		dprintf("Dayna: NON_BLOCK %x\n", device->nonblocking);
+		return B_NO_ERROR;
+
+	case ETHER_ADDMULTI:
+		if (arg == NULL)
+			return B_ERROR;
+		
+		dprintf("Dayna: DO_MULTI\n");
+		return do_multi(cam, &(device->id), (char *)arg);
 	}
 	return B_DEV_INVALID_IOCTL;
 
@@ -215,7 +270,7 @@ publish_devices()
 {
 	char		tmp[64];
 	CCB_HEADER	*ccbh;				/* -> ccb */
-	int			path, targ, lun;	/* path, target, lun ids */
+	tDeviceId   id;
 	int			max_path;			/* highest known path id */
 	int         instance = 0;
 	
@@ -236,21 +291,20 @@ publish_devices()
     ((CCB_GETDEV *)ccbh)->cam_inq_data = NULL;
 
 	/* for each path id, look for disks */
-	for (path = 0; path <= max_path ; path++) {
-		ccbh->cam_path_id = path;
-		for (targ = 0; targ < 16; targ++) {
-			ccbh->cam_target_id = targ;
-			for (lun = 0; lun < 8; lun++) {
-				ccbh->cam_target_lun = lun;
+	for (id.bus = 0; id.bus <= max_path ; id.bus++) {
+		ccbh->cam_path_id = id.bus;
+		for (id.target = 0; id.target < MAX_TARGET; id.target++) {
+			ccbh->cam_target_id = id.target;
+			for (id.lun = 0; id.lun < MAX_LUN; id.lun++) {
+				ccbh->cam_target_lun = id.lun;
 				(*cam->xpt_action)(ccbh);	/* do get_device_type */
 				if (ccbh->cam_status != CAM_REQ_CMP)
 					continue;
-				if (((CCB_GETDEV *)ccbh)->cam_pd_type != DEVICE_TYPE_CPU)
+				if (((CCB_GETDEV *)ccbh)->cam_pd_type != SCSI_DEVICE_TYPE_CPU)
 					continue;
 					
-				// JSR_TODO - Do an inquiry here and confirm that the vendor
-				// is "Dayna" and the device is "SCSI/Link"
-				add_device(path, targ, lun);
+				if (is_dayna_port(cam, &id))
+					add_device(&id);
 			}
 		}
 	}
