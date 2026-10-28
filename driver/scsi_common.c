@@ -45,8 +45,17 @@
 #define DAYNA_DEVICE_STR "SCSI/Link"
 #define DAYNA_DEVICE_STR_LEN 9
 
+#define SCSI_DATAPATH_ENABLE 0x0e
+
+#define SCSI_SET_MODE 0x0c
+#define SCSI_MODE_BROADCAST 0x04
+
 #define SCSI_GET_STATS 0x09
 #define SCSI_STATS_LEN 18
+
+#define SCSI_WRITE_PKT 0x0a
+
+#define SCSI_READ_PKT 0x08
 
 #define MAC_ADDR_LEN 6
 
@@ -268,6 +277,29 @@ int is_dayna_port(cam_for_driver_module_info *cam, tDeviceId * id)
 	return 1;
 }
 
+status_t enable_datapath(cam_for_driver_module_info *cam, tDeviceId * id,
+	bool enable)
+{
+	uint8 command[] = { SCSI_DATAPATH_ENABLE, 0x00, 0x00, 0x00, 0x00, (enable ? 0x80 : 0x00) };
+	if (execute_command(cam, id, command, sizeof(command), NULL, 0) != B_OK) {
+		dprintf("Dayna: Enable datapath failed\n");
+		return B_ERROR;
+	}
+	
+	return B_OK;
+}
+
+status_t set_mode(cam_for_driver_module_info *cam, tDeviceId * id)
+{
+	uint8 command[] = { SCSI_SET_MODE, 0x00, 0x00, 0x00, SCSI_MODE_BROADCAST, 0x80 };
+	if (execute_command(cam, id, command, sizeof(command), NULL, 0) != B_OK) {
+		dprintf("Dayna: Set mode failed\n");
+		return B_ERROR;
+	}
+	
+	return B_OK;
+}
+
 status_t get_mac_addr(cam_for_driver_module_info *cam, tDeviceId * id,
 	uint8 * buf)
 {
@@ -291,4 +323,24 @@ status_t do_multi(cam_for_driver_module_info *cam, tDeviceId * id,
 {
 	// JSR_TODO - Write this code...
 	return B_ERROR;
+}
+
+
+status_t tx_packet(cam_for_driver_module_info *cam, tDeviceId * id,
+	const void * packet, size_t packetLen)
+{
+	uint8 command[] = {
+		SCSI_WRITE_PKT,
+		0x00,
+		0x00,
+		(packetLen >> 8) & 0xff,
+		packetLen && 0xff,
+		0x00
+	};
+	if (execute_command(cam, id, command, sizeof(command), (void *)packet, packetLen) != B_OK) {
+		dprintf("Dayna: Write packet command failed\n");
+		return B_ERROR;
+	}
+	
+	return B_OK;
 }

@@ -31,10 +31,18 @@ extern status_t execute_command(cam_for_driver_module_info *cam, tDeviceId * id,
 
 extern int is_dayna_port(cam_for_driver_module_info *cam, tDeviceId * id);
 
+extern status_t enable_datapath(cam_for_driver_module_info *cam, tDeviceId * id,
+	bool enable);
+	
+extern status_t set_mode(cam_for_driver_module_info *cam, tDeviceId * id);
+
 extern status_t get_mac_addr(cam_for_driver_module_info *cam, tDeviceId * id,
 	uint8 * buf);
 	
 extern status_t do_multi(cam_for_driver_module_info *cam, tDeviceId * id,
 	char * addr);
+	
+extern status_t tx_packet(cam_for_driver_module_info *cam, tDeviceId * id,
+	const void * packet, size_t packetLen);
 
 #endif

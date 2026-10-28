@@ -111,15 +111,27 @@ my_device_open (const char *name, uint32 flags, void** c)
 		
 	tDevice * device = (tDevice *)malloc(sizeof(tDevice));
 	if (device == NULL)
-		return -1;
+		return B_ERROR;
 	
 	if (decode_scsi_ptl(name, &(device->id)) != 0) {
 		dprintf("Dayna: Failed to parse the device name");
 		free(device);
-		return -1;
+		return B_ERROR;
 	}
 	
 	device->nonblocking = 0;
+	
+	if (enable_datapath(cam, &(device->id), true) != B_OK) {
+		dprintf("Dayna: Failed enable the datapath");
+		free(device);
+		return B_ERROR;
+	}
+	
+	if (set_mode(cam, &(device->id)) != B_OK) {
+		dprintf("Dayna: Failed set mode on interface");
+		free(device);
+		return B_ERROR;
+	}
 	
 	*cookie = device;
 	return 0;
@@ -136,7 +148,7 @@ my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes)
 	dprintf("Dayna: In my_device_read(%p, %Ld, %p, %p) for my driver\n", cookie,
 		position, buf, num_bytes);
 	*num_bytes = 0;				/* tell caller nothing was read */
-	return B_ERROR;
+	return B_OK;
 }
 
 
@@ -149,8 +161,19 @@ my_device_write (void* cookie, off_t position, const void* buffer, size_t* num_b
 {
 	dprintf("Dayna: In my_device_write(%p, %Ld, %p, %p) for my driver\n", cookie,
 		position, buffer, num_bytes);
-	*num_bytes = 0;				/* tell caller nothing was written */
-	return B_ERROR;
+	
+	size_t buf_size = *num_bytes;
+	*num_bytes = 0;				/* tell caller nothing was written by default */
+	
+	tDevice * device = (tDevice *) cookie;
+	if (device == NULL)
+		return B_ERROR;
+		
+	status_t result = tx_packet(cam, &(device->id), buffer, buf_size);
+	if (result == B_OK)
+		*num_bytes = buf_size;
+	
+	return result;
 }
 
 
@@ -228,6 +251,7 @@ my_device_free (void* cookie)
 {
 	dprintf("Dayna: In my_device_free(%p) for my driver\n", cookie);
 	tDevice * device = (tDevice *) cookie;
+	enable_datapath(cam, &(device->id), false);
 	free(device);
 	return B_OK;
 }
