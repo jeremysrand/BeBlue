@@ -18,6 +18,10 @@
 #define MAX_TARGET 16
 #define MAX_LUN 8
 
+#define RX_POLL_STARTING_TIME 1000  // 1 ms poll time to start
+#define RX_POLL_INCR_TIME 1000      // Each poll is +1 ms longer
+#define RX_POLL_MAX_TIME 10000      // 10 ms poll time max
+
 
 // Types
 
@@ -35,6 +39,7 @@ typedef struct tDevice
 {
 	tDeviceId id;
 	int nonblocking;
+	tRxBuffer rx_buffer;
 }  tDevice;
 
 
@@ -113,6 +118,7 @@ my_device_open (const char *name, uint32 flags, void** c)
 	if (device == NULL)
 		return B_ERROR;
 	
+	memset(device, 0, sizeof(*device));
 	if (decode_scsi_ptl(name, &(device->id)) != 0) {
 		dprintf("Dayna: Failed to parse the device name");
 		free(device);
@@ -143,12 +149,48 @@ my_device_open (const char *name, uint32 flags, void** c)
 ----- */
 
 static status_t
-my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes)
+my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes_ptr)
 {
 	dprintf("Dayna: In my_device_read(%p, %Ld, %p, %p) for my driver\n", cookie,
-		position, buf, num_bytes);
-	*num_bytes = 0;				/* tell caller nothing was read */
-	return B_OK;
+		position, buf, num_bytes_ptr);
+	
+	size_t num_bytes = *num_bytes_ptr;
+	*num_bytes_ptr = 0;
+	
+	tDevice * device = (tDevice *) cookie;
+	if (device == NULL)
+		return B_ERROR;
+	
+	bigtime_t poll_time = RX_POLL_STARTING_TIME;
+	status_t result = B_ERROR;
+	for (;;) {
+		int rx_result = rx_packet(cam, &(device->id), &(device->rx_buffer), buf, num_bytes);
+		if (rx_result > 0) {
+			*num_bytes_ptr = rx_result;
+			result = B_OK;
+			break;
+		}
+		
+		if (rx_result < 0) {
+			break;
+		}
+			
+		if (device->nonblocking) {
+			result = B_OK;
+			break;
+		}
+		
+		if (snooze(poll_time) == B_INTERRUPTED) {
+			result = B_INTERRUPTED;
+			break;
+		}
+		
+		poll_time += RX_POLL_INCR_TIME;
+		if (poll_time > RX_POLL_MAX_TIME)
+			poll_time = RX_POLL_MAX_TIME;
+	}
+	
+	return result;
 }
 
 

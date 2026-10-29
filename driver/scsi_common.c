@@ -56,8 +56,15 @@
 #define SCSI_WRITE_PKT 0x0a
 
 #define SCSI_READ_PKT 0x08
+#define SCSI_READ_FLAGS 0xc0
 
 #define MAC_ADDR_LEN 6
+
+#define PKT_HEADER_LEN 6
+#define PKT_CRC_LEN 4
+#define PKT_DROPPED 0xffffffffu
+#define PKT_MORE_FLAG 0x10u
+#define PKT_ETHERNET_HDR_LEN 14
 
 
 // Implementation
@@ -343,4 +350,111 @@ status_t tx_packet(cam_for_driver_module_info *cam, tDeviceId * id,
 	}
 	
 	return B_OK;
+}
+
+
+static int get_packet_from_buffer(cam_for_driver_module_info *cam, tDeviceId * id,
+	tRxBuffer * buffer, void * packet, size_t maxPacketSize)
+{
+	uint8 * end = buffer->data + RX_BUFFER_SIZE;
+	uint8 * ptr = buffer->ptr;
+	
+	buffer->ptr = NULL;
+	
+	if (ptr < buffer->data)
+		return 0;
+		
+	if (ptr + PKT_HEADER_LEN > end)
+		return 0;
+	
+	uint32 pkt_len = ((uint32)ptr[0] << 8) | ptr[1];
+	if (pkt_len == 0)
+		return 0;
+		
+	uint32 flags = ((uint32)ptr[2] << 24) |
+		((uint32)ptr[3] << 16) |
+		((uint32)ptr[4] << 8) |
+		((uint32)ptr[5]);
+	if (flags == PKT_DROPPED) {
+		dprintf("Dayna: Packet dropped, resetting\n");
+		enable_datapath(cam, id, false);
+		enable_datapath(cam, id, true);
+		set_mode(cam, id);
+		return 0;
+	}
+	
+	if (pkt_len <= PKT_CRC_LEN) {
+		dprintf("Dayna: Packet len %u too short\n", pkt_len);
+		return 0;
+	}
+	
+	uint32 frame_len = pkt_len - PKT_CRC_LEN;
+	if (frame_len < PKT_ETHERNET_HDR_LEN) {
+		dprintf("Dayna: Frame len %u too short\n", frame_len);
+		return 0;
+	}
+	
+	if (ptr + PKT_HEADER_LEN + frame_len > end) {
+		dprintf("Dayna: Frame overruns the buffer, buffer=%p, ptr=%p, frame_len=%u\n",
+			buffer->data, ptr, frame_len);
+		return 0;
+	}
+	
+	if (frame_len > maxPacketSize)
+		frame_len = maxPacketSize;
+		
+	memcpy(packet, ptr + PKT_HEADER_LEN, frame_len);
+	
+	if ((flags & PKT_MORE_FLAG) != 0)
+		buffer->ptr = ptr + pkt_len + PKT_HEADER_LEN;
+
+	return frame_len;
+}
+
+
+static status_t fill_buffer(cam_for_driver_module_info *cam, tDeviceId * id,
+	tRxBuffer * buffer)
+{
+	uint8 command[] = {
+		SCSI_READ_PKT,
+		0x00,
+		0x00,
+		(RX_BUFFER_SIZE >> 8) & 0xff,
+		RX_BUFFER_SIZE && 0xff,
+		SCSI_READ_FLAGS
+	};
+	
+	// Must clear the first 10 bytes of the buffer to make sure that we correctly
+	// identify no packet and don't just return what was there before if the read
+	// doesn't change the buffer.  This clears the first 12 bytes which is more than
+	// enough.
+	uint32 * ptr = (uint32 *)buffer->data;
+	ptr[0] = 0;
+	ptr[1] = 0;
+	ptr[2] = 0;
+	
+	buffer->ptr = NULL;
+	
+	if (execute_command(cam, id, command, sizeof(command), (void *)buffer->data, RX_BUFFER_SIZE) != B_OK) {
+		dprintf("Dayna: Read packet command failed\n");
+		return B_ERROR;
+	}
+	
+	buffer->ptr = buffer->data;
+	
+	return B_OK;
+}
+
+
+int rx_packet(cam_for_driver_module_info *cam, tDeviceId * id,
+	tRxBuffer * buffer, void * packet, size_t maxPacketSize)
+{
+	int result = get_packet_from_buffer(cam, id, buffer, packet, maxPacketSize);
+	if (result != 0)
+		return result;
+	
+	if (fill_buffer(cam, id, buffer) != B_OK)
+		return B_ERROR;
+		
+	return get_packet_from_buffer(cam, id, buffer, packet, maxPacketSize);
 }

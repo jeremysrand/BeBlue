@@ -9,6 +9,11 @@
 
 #define SCSI_DEVICE_TYPE_CPU 3
 
+// 2x max ZuluSCSI multi-packet response
+//   2x1530 = 3060, rounded up to 3072
+// I got this from irixdayna on github, a driver for Dayna on IRIX.
+#define RX_BUFFER_SIZE 3072
+
 
 // Types
 
@@ -17,6 +22,11 @@ typedef struct tDeviceId {
 	int target;
 	int lun;
 } tDeviceId;
+
+typedef struct tRxBuffer {
+	uint8 * ptr;
+	uint8 data[RX_BUFFER_SIZE];
+} tRxBuffer;
 
 
 // API
@@ -44,5 +54,12 @@ extern status_t do_multi(cam_for_driver_module_info *cam, tDeviceId * id,
 	
 extern status_t tx_packet(cam_for_driver_module_info *cam, tDeviceId * id,
 	const void * packet, size_t packetLen);
+
+// Returns:
+//   - Size of packet read in bytes if > 0
+//   - 0 if there is no packet to read
+//   - -1 if an error occurs
+extern int rx_packet(cam_for_driver_module_info *cam, tDeviceId * id,
+	tRxBuffer * buffer, void * packet, size_t maxPacketSize);
 
 #endif
