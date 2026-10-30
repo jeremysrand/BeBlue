@@ -69,69 +69,6 @@
 
 // Implementation
 
-
-int decode_scsi_ptl(const char *name, tDeviceId * id)
-{
-	dprintf("Dayna: Parsing device name \"%s\"\n", name);
-	
-	id->bus = 0;
-	id->target = 0;
-	id->lun = 0;
-
-	int len = strlen(name);
-	if (len == 0) {
-		dprintf("Dayna: Device name is empty string\n");
-		return 1;
-	}
-	
-	const char * ptr = &name[len - 1];
-	// Find the last slash in the device name
-	while ((ptr >= name) && (*ptr != '/'))
-		ptr--;
-		
-	if (ptr < name) {
-		dprintf("Dayna: Unable to find last slash in device name\n");
-		return 1;
-	}
-	
-	ptr++;
-	dprintf("Dayna: Parsing \"%s\"\n", ptr);
-	
-	while (isdigit(*ptr)) {
-		id->bus = (id->bus) * 10 + (*ptr - '0');
-		ptr++;
-	}
-	if (*ptr != '_') {
-		dprintf("Dayna: Unable to find underscore between bus and target\n");
-		return 1;
-	}
-	ptr++;
-		
-	while (isdigit(*ptr)) {
-		id->target = (id->target) * 10 + (*ptr - '0');
-		ptr++;
-	}
-	if (*ptr != '_') {
-		dprintf("Dayna: Unable to find underscore between target and lun\n");
-		return 1;
-	}
-	ptr++;
-
-	while(isdigit(*ptr)) {
-		id->lun = (id->lun) * 10 + (*ptr - '0');
-		ptr++;
-	}
-	if (*ptr != '\0') {
-		dprintf("Dayna: No null terminator found after lun\n");
-		return 1;
-	}
-	
-	dprintf("Dayna: Parsed into bus=%d, target=%d, lun=%d\n", id->bus, id->target, id->lun);
-	
-	return 0;
-}
-
-
 status_t 
 do_raw_command(cam_for_driver_module_info *cam,
 			   raw_device_command *rdc, tDeviceId * id)

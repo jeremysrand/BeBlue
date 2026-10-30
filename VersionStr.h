@@ -6,7 +6,7 @@
 #define MAJOR_VER 1
 #define MINOR_VER 0
 #define PATCH_VER 1
-#define BUILD_NUM 246
+#define BUILD_NUM 254
 
 #define BETA_BUILD
 

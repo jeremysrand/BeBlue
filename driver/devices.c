@@ -17,6 +17,7 @@
 
 typedef struct tDeviceListElem {
 	char name[DEVICE_NAME_MAX_LEN];
+	tDeviceId id;
 	struct tDeviceListElem * next;
 } tDeviceListElem;
 
@@ -63,7 +64,8 @@ void add_device(tDeviceId * id)
 	if (device_list_elem == NULL)
 		return;
 		
-	sprintf(device_list_elem->name, DEVICE_NAME_PREFIX "%d_%d_%d", id->bus, id->target, id->lun);
+	sprintf(device_list_elem->name, DEVICE_NAME_PREFIX "%d", num_devices);
+	device_list_elem->id = *id;
 	num_devices++;
 	
 	dprintf("Dayna: Added device %s\n", device_list_elem->name);
@@ -92,4 +94,16 @@ const char ** get_device_names(void)
 	}
 	dprintf("Dayna: get_device_names() = %p\n", device_names);
 	return device_names;
+}
+
+
+const tDeviceId * get_device_id(const char * name)
+{
+	tDeviceListElem * device_list_elem = device_list;
+	while (device_list_elem != NULL) {
+		if (strcmp(name, device_list_elem->name) == 0) {
+			return &(device_list_elem->id);
+		}
+	}
+	return NULL;	
 }

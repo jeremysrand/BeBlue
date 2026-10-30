@@ -68,6 +68,65 @@ init_hardware (void)
 }
 
 
+static int
+get_max_path (CCB_HEADER *ccbh)
+{
+	uchar max_path;
+
+	ccbh->cam_func_code = XPT_PATH_INQ;
+	ccbh->cam_path_id = 0xFF;	/* return only highest path id */
+	(*cam->xpt_action) (ccbh);		/* do path inquiry */
+	if (ccbh->cam_status != CAM_REQ_CMP)
+		return -1;
+	max_path = ((CCB_PATHINQ *)ccbh)->cam_hpath_id;
+	return (max_path == 0xFF) ? -1 : max_path;
+}
+
+
+static void find_devices(void)
+{
+	CCB_HEADER	*ccbh;				/* -> ccb */
+	tDeviceId   id;
+	int			max_path;			/* highest known path id */
+	
+	free_devices();
+	cam->minfo.rescan();
+	
+	if (!(ccbh = (*cam->xpt_ccb_alloc)())){
+		return;
+	}
+
+	if ((max_path = get_max_path (ccbh)) < 0) { /* get highest path id */
+		(*cam->xpt_ccb_free) (ccbh);
+		return;
+	}
+
+	ccbh->cam_func_code = XPT_GDEV_TYPE;
+    ((CCB_GETDEV *)ccbh)->cam_inq_data = NULL;
+
+	/* for each path id, look for disks */
+	for (id.bus = 0; id.bus <= max_path ; id.bus++) {
+		ccbh->cam_path_id = id.bus;
+		for (id.target = 0; id.target < MAX_TARGET; id.target++) {
+			ccbh->cam_target_id = id.target;
+			for (id.lun = 0; id.lun < MAX_LUN; id.lun++) {
+				ccbh->cam_target_lun = id.lun;
+				(*cam->xpt_action)(ccbh);	/* do get_device_type */
+				if (ccbh->cam_status != CAM_REQ_CMP)
+					continue;
+				if (((CCB_GETDEV *)ccbh)->cam_pd_type != SCSI_DEVICE_TYPE_CPU)
+					continue;
+					
+				if (is_dayna_port(cam, &id))
+					add_device(&id);
+			}
+		}
+	}
+
+	(*cam->xpt_ccb_free) (ccbh);
+}
+
+
 /* ----------
 	init_driver - optional function - called every time the driver
 	is loaded.
@@ -82,6 +141,7 @@ init_driver (void)
 	if(get_module(cam_name, (module_info **)&cam) != B_OK)
 		return B_ERROR;
 
+	find_devices();
 	return B_NO_ERROR;
 }
 
@@ -113,18 +173,19 @@ my_device_open (const char *name, uint32 flags, void** c)
 		c);
 		
 	tDevice **cookie = (tDevice **) c;
-		
+	
+	const tDeviceId * id = get_device_id(name);
+	if (id == NULL) {
+		dprintf("Dayna: Unable to find device %s\n", name);
+		return B_ERROR;
+	}
+	
 	tDevice * device = (tDevice *)malloc(sizeof(tDevice));
 	if (device == NULL)
 		return B_ERROR;
 	
 	memset(device, 0, sizeof(*device));
-	if (decode_scsi_ptl(name, &(device->id)) != 0) {
-		dprintf("Dayna: Failed to parse the device name");
-		free(device);
-		return B_ERROR;
-	}
-	
+	device->id = *id;
 	device->nonblocking = 0;
 	
 	if (enable_datapath(cam, &(device->id), true) != B_OK) {
@@ -312,20 +373,6 @@ device_hooks my_device_hooks = {
 };
 
 
-static int
-get_max_path (CCB_HEADER *ccbh)
-{
-	uchar max_path;
-
-	ccbh->cam_func_code = XPT_PATH_INQ;
-	ccbh->cam_path_id = 0xFF;	/* return only highest path id */
-	(*cam->xpt_action) (ccbh);		/* do path inquiry */
-	if (ccbh->cam_status != CAM_REQ_CMP)
-		return -1;
-	max_path = ((CCB_PATHINQ *)ccbh)->cam_hpath_id;
-	return (max_path == 0xFF) ? -1 : max_path;
-}
-
 /* ----------
 	publish_devices - return a null-terminated array of devices
 	supported by this driver.
@@ -334,49 +381,6 @@ get_max_path (CCB_HEADER *ccbh)
 _EXPORT const char**
 publish_devices()
 {
-	char		tmp[64];
-	CCB_HEADER	*ccbh;				/* -> ccb */
-	tDeviceId   id;
-	int			max_path;			/* highest known path id */
-	int         instance = 0;
-	
-	free_devices();
-	cam->minfo.rescan();
-	
-	if (!(ccbh = (*cam->xpt_ccb_alloc)())){
-		return NULL;
-	}
-
-	if ((max_path = get_max_path (ccbh)) < 0) { /* get highest path id */
-		(*cam->xpt_ccb_free) (ccbh);
-		return NULL;
-	}
-
-
-	ccbh->cam_func_code = XPT_GDEV_TYPE;
-    ((CCB_GETDEV *)ccbh)->cam_inq_data = NULL;
-
-	/* for each path id, look for disks */
-	for (id.bus = 0; id.bus <= max_path ; id.bus++) {
-		ccbh->cam_path_id = id.bus;
-		for (id.target = 0; id.target < MAX_TARGET; id.target++) {
-			ccbh->cam_target_id = id.target;
-			for (id.lun = 0; id.lun < MAX_LUN; id.lun++) {
-				ccbh->cam_target_lun = id.lun;
-				(*cam->xpt_action)(ccbh);	/* do get_device_type */
-				if (ccbh->cam_status != CAM_REQ_CMP)
-					continue;
-				if (((CCB_GETDEV *)ccbh)->cam_pd_type != SCSI_DEVICE_TYPE_CPU)
-					continue;
-					
-				if (is_dayna_port(cam, &id))
-					add_device(&id);
-			}
-		}
-	}
-
-	(*cam->xpt_ccb_free) (ccbh);
-
 	return get_device_names();
 }
 

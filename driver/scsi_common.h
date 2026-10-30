@@ -31,8 +31,6 @@ typedef struct tRxBuffer {
 
 // API
 
-extern int decode_scsi_ptl(const char *name, tDeviceId * id);
-
 extern status_t do_raw_command(cam_for_driver_module_info *cam,
 			   raw_device_command *rdc, tDeviceId * id);
 			   
