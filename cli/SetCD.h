@@ -10,6 +10,7 @@ class SetCD : public Command {
 	public:
 		SetCD();
 		
+		virtual tSCSIDeviceMask RequiredDeviceTypes();
 		virtual const char * Command();
 		virtual const char * Usage();
 		virtual bool RequiresOneDevice();

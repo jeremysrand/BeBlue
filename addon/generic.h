@@ -44,7 +44,7 @@ public:
 		strcpy(pretty_name, title);
 		return (totlen);
 	}
-	bool IsIpDevice(void) { return (0); }
+	bool IsIpDevice(void) { return true; }
 	status_t Config(const char *device, net_settings *ncw,
 					BCallbackHandler *dallback, bool autoconf);
 

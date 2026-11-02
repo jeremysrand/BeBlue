@@ -10,6 +10,7 @@ class WifiInfo : public Command {
 	public:
 		WifiInfo();
 		
+		virtual tSCSIDeviceMask RequiredDeviceTypes();
 		virtual const char * Command();
 		virtual const char * Usage();
 		virtual bool RequiresOneDevice();

@@ -14,6 +14,12 @@ WifiJoin::WifiJoin() : Command(),
 }
 
 
+tSCSIDeviceMask WifiJoin::RequiredDeviceTypes()
+{
+	return SCSI_SCAN_DEVICE_TYPE(SCSI_DEVICE_TYPE_CPU);
+}
+
+
 const char * WifiJoin::Command()
 {
 	return "wifi-join";

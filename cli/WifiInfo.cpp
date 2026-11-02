@@ -9,6 +9,12 @@ WifiInfo::WifiInfo() : Command()
 }
 
 
+tSCSIDeviceMask WifiInfo::RequiredDeviceTypes()
+{
+	return SCSI_SCAN_DEVICE_TYPE(SCSI_DEVICE_TYPE_CPU);
+}
+
+
 const char * WifiInfo::Command()
 {
 	return "wifi-info";

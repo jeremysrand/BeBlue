@@ -12,6 +12,12 @@ SetCD::SetCD() : Command(),
 }
 
 
+tSCSIDeviceMask SetCD::RequiredDeviceTypes()
+{
+	return SCSI_SCAN_DEVICE_TYPE(SCSI_DEVICE_TYPE_CDROM);
+}
+
+
 const char * SetCD::Command()
 {
 	return "set-cd";

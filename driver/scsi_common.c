@@ -30,33 +30,38 @@
 
 #define SCSI_TIMEOUT 1000000
 
-#define SCSI_INQUIRY 0x12
+#define SCSI_INQUIRY_CMD 0x12
 #define SCSI_INQ_TYPE_MASK 0x1f
 #define SCSI_INQ_TYPE_OFFSET 0
 #define SCSI_INQ_SCSI_VERSION_OFFSET 2
 #define SCSI_INQ_VENDOR_STR_OFFSET 8
 #define SCSI_INQ_DEVICE_STR_OFFSET 16
 #define SCSI_INQ_VERSION_STR_OFFSET 32
-#define SCSI_INQ_VENDOR_INFO_STR_OFFSET 36
-#define SCSI_INQ_LEN 56
+#define SCSI_INQ_LEN 36
 
 #define DAYNA_VENDOR_STR "Dayna"
 #define DAYNA_VENDOR_STR_LEN 5
 #define DAYNA_DEVICE_STR "SCSI/Link"
 #define DAYNA_DEVICE_STR_LEN 9
 
-#define SCSI_DATAPATH_ENABLE 0x0e
+#define SCSI_DATAPATH_ENABLE_CMD 0x0e
+#define SCSI_DATAPATH_ENABLE 0x80
+#define SCSI_DATAPATH_DISABLE 0x00
 
-#define SCSI_SET_MODE 0x0c
+#define SCSI_SET_MODE_CMD 0x0c
 #define SCSI_MODE_BROADCAST 0x04
 
-#define SCSI_GET_STATS 0x09
+#define SCSI_GET_STATS_CMD 0x09
 #define SCSI_STATS_LEN 18
 
-#define SCSI_WRITE_PKT 0x0a
+#define SCSI_WRITE_PKT_CMD 0x0a
 
-#define SCSI_READ_PKT 0x08
-#define SCSI_READ_FLAGS 0xc0
+#define SCSI_READ_PKT_CMD 0x08
+#define SCSI_READ_MODE_POLLED 0x80
+#define SCSI_READ_MODE_BLIND 0xc0
+#define SCSI_READ_MODE_BOUNDED 0xe0
+
+#define SCSI_ADD_MULTICAST_CMD 0x0d
 
 #define MAC_ADDR_LEN 6
 
@@ -194,7 +199,7 @@ status_t execute_command(cam_for_driver_module_info *cam, tDeviceId * id,
 int is_dayna_port(cam_for_driver_module_info *cam, tDeviceId * id)
 {
 	uint8 data[SCSI_INQ_LEN];
-	uint8 command[] = { SCSI_INQUIRY, 0x00, 0x00, 0x00, sizeof(data), 0x00 };
+	uint8 command[] = { SCSI_INQUIRY_CMD, 0x00, 0x00, 0x00, sizeof(data), 0x00 };
 	if (execute_command(cam, id, command, sizeof(command), data, sizeof(data)) != B_OK) {
 		dprintf("Dayna: Inquiry command failed\n");
 		return 0;
@@ -224,7 +229,8 @@ int is_dayna_port(cam_for_driver_module_info *cam, tDeviceId * id)
 status_t enable_datapath(cam_for_driver_module_info *cam, tDeviceId * id,
 	bool enable)
 {
-	uint8 command[] = { SCSI_DATAPATH_ENABLE, 0x00, 0x00, 0x00, 0x00, (enable ? 0x80 : 0x00) };
+	uint8 command[] = { SCSI_DATAPATH_ENABLE_CMD, 0x00, 0x00, 0x00, 0x00,
+		(enable ? SCSI_DATAPATH_ENABLE : SCSI_DATAPATH_DISABLE) };
 	if (execute_command(cam, id, command, sizeof(command), NULL, 0) != B_OK) {
 		dprintf("Dayna: Enable datapath failed\n");
 		return B_ERROR;
@@ -235,11 +241,15 @@ status_t enable_datapath(cam_for_driver_module_info *cam, tDeviceId * id,
 
 status_t set_mode(cam_for_driver_module_info *cam, tDeviceId * id)
 {
-	uint8 command[] = { SCSI_SET_MODE, 0x00, 0x00, 0x00, SCSI_MODE_BROADCAST, 0x80 };
+#if 0
+	// I don't think this is required based on my research from tyhe SCSI/Link
+	// Implementor's Guide
+	uint8 command[] = { SCSI_SET_MODE_CMD, 0x00, 0x00, 0x00, SCSI_MODE_BROADCAST, 0x80 };
 	if (execute_command(cam, id, command, sizeof(command), NULL, 0) != B_OK) {
 		dprintf("Dayna: Set mode failed\n");
 		return B_ERROR;
 	}
+#endif
 	
 	return B_OK;
 }
@@ -248,7 +258,7 @@ status_t get_mac_addr(cam_for_driver_module_info *cam, tDeviceId * id,
 	uint8 * buf)
 {
 	uint8 data[SCSI_STATS_LEN];
-	uint8 command[] = { SCSI_GET_STATS, 0x00, 0x00, 0x00, sizeof(data), 0x00 };
+	uint8 command[] = { SCSI_GET_STATS_CMD, 0x00, 0x00, 0x00, sizeof(data), 0x00 };
 	if (execute_command(cam, id, command, sizeof(command), data, sizeof(data)) != B_OK) {
 		dprintf("Dayna: Get stats command failed\n");
 		return B_ERROR;
@@ -265,8 +275,20 @@ status_t get_mac_addr(cam_for_driver_module_info *cam, tDeviceId * id,
 status_t do_multi(cam_for_driver_module_info *cam, tDeviceId * id,
 	char * addr)
 {
-	// JSR_TODO - Write this code...
-	return B_ERROR;
+	uint8 command[] = {
+		SCSI_ADD_MULTICAST_CMD,
+		0x00,
+		0x00,
+		0x00,
+		MAC_ADDR_LEN,
+		0x00
+	};
+	if (execute_command(cam, id, command, sizeof(command), (void *)addr, MAC_ADDR_LEN) != B_OK) {
+		dprintf("Dayna: Add multicast command failed\n");
+		return B_ERROR;
+	}
+	
+	return B_OK;
 }
 
 
@@ -274,11 +296,11 @@ status_t tx_packet(cam_for_driver_module_info *cam, tDeviceId * id,
 	const void * packet, size_t packetLen)
 {
 	uint8 command[] = {
-		SCSI_WRITE_PKT,
+		SCSI_WRITE_PKT_CMD,
 		0x00,
 		0x00,
 		(packetLen >> 8) & 0xff,
-		packetLen && 0xff,
+		packetLen & 0xff,
 		0x00
 	};
 	if (execute_command(cam, id, command, sizeof(command), (void *)packet, packetLen) != B_OK) {
@@ -342,8 +364,12 @@ static int get_packet_from_buffer(cam_for_driver_module_info *cam, tDeviceId * i
 		
 	memcpy(packet, ptr + PKT_HEADER_LEN, frame_len);
 	
+#if 0
+	// Disable this for polled mode.  We expect a single packet on each read in this
+	// mode.
 	if ((flags & PKT_MORE_FLAG) != 0)
 		buffer->ptr = ptr + pkt_len + PKT_HEADER_LEN;
+#endif
 
 	return frame_len;
 }
@@ -353,12 +379,12 @@ static status_t fill_buffer(cam_for_driver_module_info *cam, tDeviceId * id,
 	tRxBuffer * buffer)
 {
 	uint8 command[] = {
-		SCSI_READ_PKT,
+		SCSI_READ_PKT_CMD,
 		0x00,
 		0x00,
 		(RX_BUFFER_SIZE >> 8) & 0xff,
 		RX_BUFFER_SIZE && 0xff,
-		SCSI_READ_FLAGS
+		SCSI_READ_MODE_POLLED
 	};
 	
 	// Must clear the first 10 bytes of the buffer to make sure that we correctly
@@ -386,9 +412,16 @@ static status_t fill_buffer(cam_for_driver_module_info *cam, tDeviceId * id,
 int rx_packet(cam_for_driver_module_info *cam, tDeviceId * id,
 	tRxBuffer * buffer, void * packet, size_t maxPacketSize)
 {
+#if 0
+	// There is support for a single buffer to be filled with more than one
+	// packet at a time but I am simplifying things down to just polled mode.
+	// In that mode, the read either gets a single packet or it doesn't.  So,
+	// I am disabling the code for trying to fetch a packet from the buffer
+	// filled in a previous read.
 	int result = get_packet_from_buffer(cam, id, buffer, packet, maxPacketSize);
 	if (result != 0)
 		return result;
+#endif
 	
 	if (fill_buffer(cam, id, buffer) != B_OK)
 		return B_ERROR;

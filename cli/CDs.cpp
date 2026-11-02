@@ -11,6 +11,12 @@ CDs::CDs() : Command()
 }
 
 
+tSCSIDeviceMask CDs::RequiredDeviceTypes()
+{
+	return SCSI_SCAN_DEVICE_TYPE(SCSI_DEVICE_TYPE_CDROM);
+}
+
+
 const char * CDs::Command()
 {
 	return "cds";

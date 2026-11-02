@@ -12,6 +12,12 @@ WifiScan::WifiScan() : Command()
 }
 
 
+tSCSIDeviceMask WifiScan::RequiredDeviceTypes()
+{
+	return SCSI_SCAN_DEVICE_TYPE(SCSI_DEVICE_TYPE_CPU);
+}
+
+
 const char * WifiScan::Command()
 {
 	return "wifi-scan";

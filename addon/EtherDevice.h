@@ -52,19 +52,32 @@ public:
 		return (ioctl(fd, ETHER_ADDMULTI, address));
 	}
 	status_t RemoveMulticastAddress(const char *address) {
-		return (ioctl(fd, ETHER_REMMULTI, address));
+		// I don't see a way to remove a multicast address on the DaynaPort
+		// in general.  Perhaps it needs to disable, reenable and then add
+		// the remaining addresses again.  Just skip it for now.
+		//return (ioctl(fd, ETHER_REMMULTI, address));
+		return B_OK;
 	}
 	status_t SetPromiscuous(bool yes) {
+		// Not supported on the Dayna port and given the bandwidth over the
+		// SCSI bus and the need to poll for reads, you really don't want to
+		// do this.
+#if 0
 		int promisc = yes;
 		return (ioctl(fd, ETHER_SETPROMISC, &promisc));
+#endif
+		return B_ERROR;
 	}
     unsigned MaxPacketSize(void) {
+#if 0
 		if (framesize == 0) {
 			if (ioctl(fd, ETHER_GETFRAMESIZE, &framesize) < 0) {
 				framesize = 1514;
 			}
 		}
 		return (framesize);
+#endif
+		return 1514; // Hardcode for the DaynaPort.
 	}
 	net_device_type Type(void) {
 		return (B_ETHER_NET_DEVICE);

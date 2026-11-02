@@ -88,10 +88,10 @@ int main(int argc, char *argv[])
 			command->VerbosePrintf("Using BlueSCSI device %s\n",
 				globalOpts.Device().PathString());
 		} else {
-			scan = new BlueSCSIScan(command);
+			scan = new BlueSCSIScan(command, command->RequiredDeviceTypes());
 			if (scan->NumDevices() == 0) {
 				delete scan;
-				fprintf(stderr, "ERROR: No BlueSCSI devices found.\n");
+				fprintf(stderr, "ERROR: No BlueSCSI devices of the correct type found.\n");
 				exit(-1);
 			}
 			globalOpts.SetDevice(scan->DeviceAt(0));

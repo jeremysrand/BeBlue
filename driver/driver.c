@@ -262,8 +262,8 @@ my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes_ptr)
 static status_t
 my_device_write (void* cookie, off_t position, const void* buffer, size_t* num_bytes)
 {
-	dprintf("Dayna: In my_device_write(%p, %Ld, %p, %p) for my driver\n", cookie,
-		position, buffer, num_bytes);
+	dprintf("Dayna: In my_device_write(%p, %Ld, %p, %p -> %lu) for my driver\n", cookie,
+		position, buffer, num_bytes, *num_bytes);
 	
 	size_t buf_size = *num_bytes;
 	*num_bytes = 0;				/* tell caller nothing was written by default */

@@ -11,6 +11,12 @@ Command::Command()
 }
 
 
+tSCSIDeviceMask Command::RequiredDeviceTypes()
+{
+	return SCSI_SCAN_DEVICE_ALL;
+}
+
+
 void Command::SetGlobalOpts(GlobalOpts & globalOptsArg)
 {
 	globalOpts = &globalOptsArg;

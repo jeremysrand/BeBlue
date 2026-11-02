@@ -9,10 +9,7 @@
 
 #define SCSI_DEVICE_TYPE_CPU 3
 
-// 2x max ZuluSCSI multi-packet response
-//   2x1530 = 3060, rounded up to 3072
-// I got this from irixdayna on github, a driver for Dayna on IRIX.
-#define RX_BUFFER_SIZE 3072
+#define RX_BUFFER_SIZE 1524
 
 
 // Types

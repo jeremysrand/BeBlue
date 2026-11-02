@@ -10,6 +10,7 @@ class WifiJoin : public Command {
 	public:
 		WifiJoin();
 		
+		virtual tSCSIDeviceMask RequiredDeviceTypes();
 		virtual const char * Command();
 		virtual const char * Usage();
 		virtual bool RequiresOneDevice();

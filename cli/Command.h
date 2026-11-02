@@ -1,4 +1,4 @@
-#include "common/BlueSCSIDevice.h"
+#include "common/BlueSCSIScan.h"
 
 #ifndef CLI_COMMAND_H
 #define CLI_COMMAND_H
@@ -19,6 +19,7 @@ class Command : public BlueSCSIDeviceErrorHandler
 		virtual const char * Command() = 0;
 		virtual const char * Usage() = 0;
 		virtual bool RequiresOneDevice() = 0;
+		virtual tSCSIDeviceMask RequiredDeviceTypes();
 		virtual bool ParseArgs(int argc, const char * argv[]) = 0;
 		virtual int Execute() = 0;
 		

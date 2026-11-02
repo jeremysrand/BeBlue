@@ -10,6 +10,7 @@ class WifiScan : public Command {
 	public:
 		WifiScan();
 		
+		virtual tSCSIDeviceMask RequiredDeviceTypes();
 		virtual const char * Command();
 		virtual const char * Usage();
 		virtual bool RequiresOneDevice();

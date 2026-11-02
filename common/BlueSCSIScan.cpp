@@ -12,9 +12,11 @@
 
 // Implementation
 
-BlueSCSIScan::BlueSCSIScan(BlueSCSIDeviceErrorHandler * errHandlerArg)
+BlueSCSIScan::BlueSCSIScan(BlueSCSIDeviceErrorHandler * errHandlerArg,
+	tSCSIDeviceMask deviceMaskArg)
 	: errHandler(errHandlerArg),
-	  logger(errHandlerArg != NULL ? errHandlerArg->GetLogger() : NULL)
+	  logger(errHandlerArg != NULL ? errHandlerArg->GetLogger() : NULL),
+	  deviceMask(deviceMaskArg)
 {
 	Scan();
 }
@@ -109,9 +111,14 @@ void BlueSCSIScan::CheckIfBlueSCSI(BPath * path)
 {
 	BlueSCSIDevice * device = new BlueSCSIDevice(path, errHandler);
 	if (device->IsBlueSCSI()) {
-		Log("Device at %s is a BlueSCSI, adding it to the list of devices",
-			path->Path());
-		deviceList.AddItem(device);
+		if (SCSI_SCAN_IS_DEVICE_TYPE_SET(deviceMask, device->Inquiry().type)) {
+			Log("Device at %s is a BlueSCSI, adding it to the list of devices",
+				path->Path());
+			deviceList.AddItem(device);
+		} else {
+			Log("Device at %s a BlueSCSI but the wrong device type, ignoring", path->Path());
+			delete device;	
+		}
 	} else {
 		Log("Device at %s is not a BlueSCSI, ignoring", path->Path());
 		delete device;
