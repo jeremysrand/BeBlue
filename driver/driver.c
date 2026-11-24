@@ -40,6 +40,14 @@ typedef struct tDevice
 	tDeviceId id;
 	int nonblocking;
 	tRxBuffer rx_buffer;
+	
+	// This semaphore is actually never acquired.  It is created with a 0 count
+	// in the open function.  The read function attempts to acquire it with a
+	// timeout.  It expects to timeout and this is how the read function polls
+	// for a packet.  On close, the semaphore is deleted.  That will cause any
+	// read function to wake up and return immediately.  So, this is used to
+	// notify read functions that the device has been closed.
+	sem_id sem;
 }  tDevice;
 
 
@@ -169,8 +177,8 @@ uninit_driver (void)
 static status_t
 my_device_open (const char *name, uint32 flags, void** c)
 {
-	dprintf("Dayna: In my_device_open(%s, %u, %p) for my driver\n", name, flags,
-		c);
+	// dprintf("Dayna: In my_device_open(%s, %u, %p) for my driver\n", name, flags,
+	// 	c);
 		
 	tDevice **cookie = (tDevice **) c;
 	
@@ -187,15 +195,21 @@ my_device_open (const char *name, uint32 flags, void** c)
 	memset(device, 0, sizeof(*device));
 	device->id = *id;
 	device->nonblocking = 0;
+	device->sem = create_sem(0, name);
+	if (device->sem < B_OK) {
+		dprintf("Dayna: Failed create a semaphore");
+		free(device);
+		return B_ERROR;
+	}
 	
 	if (enable_datapath(cam, &(device->id), true) != B_OK) {
-		dprintf("Dayna: Failed enable the datapath");
+		dprintf("Dayna: Failed to enable the datapath");
 		free(device);
 		return B_ERROR;
 	}
 	
 	if (set_mode(cam, &(device->id)) != B_OK) {
-		dprintf("Dayna: Failed set mode on interface");
+		dprintf("Dayna: Failed to set mode on interface");
 		free(device);
 		return B_ERROR;
 	}
@@ -212,8 +226,8 @@ my_device_open (const char *name, uint32 flags, void** c)
 static status_t
 my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes_ptr)
 {
-	dprintf("Dayna: In my_device_read(%p, %Ld, %p, %p) for my driver\n", cookie,
-		position, buf, num_bytes_ptr);
+	// dprintf("Dayna: In my_device_read(%p, %Ld, %p, %p) for my driver\n", cookie,
+	// 	position, buf, num_bytes_ptr);
 	
 	size_t num_bytes = *num_bytes_ptr;
 	*num_bytes_ptr = 0;
@@ -241,9 +255,19 @@ my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes_ptr)
 			break;
 		}
 		
-		if (snooze(poll_time) == B_INTERRUPTED) {
+		status_t status = acquire_sem_etc(device->sem, 1, B_CAN_INTERRUPT | B_RELATIVE_TIMEOUT, poll_time);
+		if (status == B_BAD_SEM_ID) {
+			// This indicates that the device has been closed.  Return B_OK with 0 data to indicate EOF.
+			result = B_OK;
+			break;
+		}
+		if (status == B_INTERRUPTED) {
 			result = B_INTERRUPTED;
 			break;
+		}
+		if ((status != B_TIMED_OUT) &&
+		    (status != B_WOULD_BLOCK)) {
+		    dprintf("Dayna: Unexpected result from acquire_sem_etc() = %d\n", status);
 		}
 		
 		poll_time += RX_POLL_INCR_TIME;
@@ -262,8 +286,8 @@ my_device_read (void* cookie, off_t position, void *buf, size_t* num_bytes_ptr)
 static status_t
 my_device_write (void* cookie, off_t position, const void* buffer, size_t* num_bytes)
 {
-	dprintf("Dayna: In my_device_write(%p, %Ld, %p, %p -> %lu) for my driver\n", cookie,
-		position, buffer, num_bytes, *num_bytes);
+	// dprintf("Dayna: In my_device_write(%p, %Ld, %p, %p -> %lu) for my driver\n", cookie,
+	// 	position, buffer, num_bytes, *num_bytes);
 	
 	size_t buf_size = *num_bytes;
 	*num_bytes = 0;				/* tell caller nothing was written by default */
@@ -287,8 +311,8 @@ my_device_write (void* cookie, off_t position, const void* buffer, size_t* num_b
 static status_t
 my_device_control (void* cookie, uint32 op, void* arg, size_t len)
 {
-	dprintf("Dayna: In my_device_control(%p, %u, %p, %u) for my driver\n", cookie,
-		op, arg, len);
+	// dprintf("Dayna: In my_device_control(%p, %u, %p, %u) for my driver\n", cookie,
+	// 	op, arg, len);
 	tDevice * device = (tDevice *) cookie;
 	if (device == NULL)
 		return B_ERROR;
@@ -298,19 +322,19 @@ my_device_control (void* cookie, uint32 op, void* arg, size_t len)
 		 if (arg == NULL)
 		 	return B_ERROR;
 		 	
-		dprintf("Dayna: Execute raw command\n");
+		// dprintf("Dayna: Execute raw command\n");
 		raw_device_command *rdc = (raw_device_command *) arg;
 		return do_raw_command(cam, rdc, &(device->id));
 		
 	case ETHER_INIT:
-		dprintf("Dayna: ETHER_INIT, nothing to do\n");
+		// dprintf("Dayna: ETHER_INIT, nothing to do\n");
 		return B_NO_ERROR;
 
 	case ETHER_GETADDR:
 		if (arg == NULL)
 			return (B_ERROR);
 		
-		dprintf("Dayna: GET_ADDR\n");
+		// dprintf("Dayna: GET_ADDR\n");
 		return get_mac_addr(cam, &(device->id), (uint8 *)arg);
 
 	case ETHER_NONBLOCK:
@@ -318,14 +342,14 @@ my_device_control (void* cookie, uint32 op, void* arg, size_t len)
 			return B_ERROR;
 		
 		memcpy(&device->nonblocking, arg, sizeof(device->nonblocking));
-		dprintf("Dayna: NON_BLOCK %x\n", device->nonblocking);
+		// dprintf("Dayna: NON_BLOCK %x\n", device->nonblocking);
 		return B_NO_ERROR;
 
 	case ETHER_ADDMULTI:
 		if (arg == NULL)
 			return B_ERROR;
 		
-		dprintf("Dayna: DO_MULTI\n");
+		// dprintf("Dayna: DO_MULTI\n");
 		return do_multi(cam, &(device->id), (char *)arg);
 	}
 	return B_DEV_INVALID_IOCTL;
@@ -340,7 +364,11 @@ my_device_control (void* cookie, uint32 op, void* arg, size_t len)
 static status_t
 my_device_close (void* cookie)
 {
-	dprintf("Dayna: In my_device_close(%p) for my driver\n", cookie);
+	// dprintf("Dayna: In my_device_close(%p) for my driver\n", cookie);
+	tDevice * device = (tDevice *) cookie;
+	delete_sem(device->sem);
+	enable_datapath(cam, &(device->id), false);
+	
 	return B_OK;
 }
 
@@ -352,9 +380,8 @@ my_device_close (void* cookie)
 static status_t
 my_device_free (void* cookie)
 {
-	dprintf("Dayna: In my_device_free(%p) for my driver\n", cookie);
+	// dprintf("Dayna: In my_device_free(%p) for my driver\n", cookie);
 	tDevice * device = (tDevice *) cookie;
-	enable_datapath(cam, &(device->id), false);
 	free(device);
 	return B_OK;
 }
